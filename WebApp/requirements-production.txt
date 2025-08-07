@@ -1,0 +1,16 @@
+# NAVUS Production Requirements
+# Lightweight dependencies for cloud deployment
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pandas>=2.0.0
+python-multipart==0.0.6
+pydantic>=2.0.0
+
+# Optional: Only include if using actual ML models in production
+# torch>=2.1.0
+# transformers>=4.36.0
+# peft>=0.6.0
+
+# Production optimizations
+gunicorn==21.2.0

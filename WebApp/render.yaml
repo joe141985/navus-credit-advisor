@@ -1,0 +1,12 @@
+{
+  "services": [
+    {
+      "type": "web",
+      "name": "navus-api",
+      "env": "python",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "python backend_production.py",
+      "healthCheckPath": "/health"
+    }
+  ]
+}
