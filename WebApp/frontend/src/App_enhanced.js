@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Send, CreditCard, User, DollarSign, MapPin, Settings, Sparkles, Clock } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://navus-api.onrender.com';
 
 function App() {
   const [messages, setMessages] = useState([
