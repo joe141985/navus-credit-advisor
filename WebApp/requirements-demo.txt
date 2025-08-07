@@ -1,0 +1,7 @@
+# NAVUS Demo Requirements - Lightweight for fast deployment
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pandas>=2.0.0
+python-multipart==0.0.6
+pydantic>=2.0.0
+gunicorn==21.2.0
