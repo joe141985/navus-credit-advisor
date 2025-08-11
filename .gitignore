@@ -1,0 +1,16 @@
+
+# Large training datasets
+Training/massive_navus_dataset_*.json
+Training/combined_massive_dataset_*.json
+Training/enhanced_navus_model/
+Training/logs/
+Training/checkpoints/
+
+# Chart outputs
+Scripts/charts/
+*.png
+
+# Model files
+*.bin
+*.safetensors
+
