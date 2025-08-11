@@ -31,10 +31,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://*.vercel.app",
-        "https://navus-credit-advisor.vercel.app",
-        "http://localhost:3000",  # For local development
-        "https://localhost:3000"
+        "*"  # Allow all origins for now to debug
     ],
     allow_credentials=True,
     allow_methods=["*"],
