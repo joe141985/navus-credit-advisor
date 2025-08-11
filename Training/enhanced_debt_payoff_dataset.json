@@ -1,0 +1,37 @@
+[
+  {
+    "instruction": "I have $5000 credit card debt at 19.99% interest, minimum payment $125/month. If I can pay $300/month, how long to pay off?",
+    "input": "debt_amount: $5000, interest_rate: 19.99%, current_payment: $125, proposed_payment: $300",
+    "output": "**Debt Payoff Analysis:**\n\n**Current Plan:** $125/month\n- Time to payoff: 62 months (5.2 years)\n- Total interest paid: $2,750\n- Total cost: $7,750\n\n**Accelerated Plan:** $300/month\n- Time to payoff: 19 months (1.6 years)\n- Total interest paid: $848\n- Total cost: $5,848\n- **Savings: $1,902 in interest**\n- **Time saved: 43 months**\n\n📊 **Payment Strategy Score: 9.2/10**\n✅ Excellent acceleration strategy\n💡 Consider balance transfer to 0% APR card for maximum savings"
+  },
+  {
+    "instruction": "I have multiple credit cards: Card A: $3000 at 24.99%, Card B: $2000 at 18.99%, Card C: $1500 at 21.99%. Which should I pay off first?",
+    "input": "card_a: $3000 @ 24.99%, card_b: $2000 @ 18.99%, card_c: $1500 @ 21.99%",
+    "output": "**Multi-Card Debt Strategy Analysis:**\n\n**Recommended: Avalanche Method (Highest Interest First)**\n\n**Priority Order:**\n1. **Card A: $3000 @ 24.99%** ⭐ PAY FIRST\n2. **Card C: $1500 @ 21.99%** ⭐ PAY SECOND  \n3. **Card B: $2000 @ 18.99%** ⭐ PAY LAST\n\n**Monthly Strategy:**\n- Minimum payments on B & C\n- All extra money to Card A\n- Once A is paid, attack Card C\n- Finally tackle Card B\n\n📊 **Strategy Score: 9.5/10**\n💰 **Potential Savings:** $1,200+ vs minimum payments\n\n**Alternative: Balance Transfer**\nConsider RBC Cashback Preferred Mastercard (0% intro APR) to consolidate all debt at lower rate."
+  },
+  {
+    "instruction": "Should I get a balance transfer card or keep paying my current 23% card?",
+    "input": "current_debt: $4000, current_rate: 23%, current_payment: $200",
+    "output": "**Balance Transfer Analysis:**\n\n**Current Situation:** $4000 @ 23%\n- Time to payoff: 24 months\n- Total interest: $1,156\n- Total cost: $5,156\n\n**With Balance Transfer (0% for 12 months):**\n- Transfer fee: ~$120 (3%)\n- Interest saved: $920+ \n- **Net savings: $800+**\n\n📊 **Balance Transfer Score: 9.8/10**\n\n**Recommended Cards:**\n1. **BMO eclipse rise Visa** - 0% intro APR, $0 fee\n2. **RBC Cashback Preferred** - 0% intro APR, $0 fee\n\n**Action Plan:**\n✅ Apply for balance transfer card\n✅ Transfer within 60 days\n✅ Pay aggressively during 0% period\n✅ Avoid new purchases on old card\n\n⚠️ **Warning:** Must qualify for $4000+ credit limit"
+  },
+  {
+    "instruction": "Create a debt payoff plan for someone with $8000 debt, $400/month budget, wants to be debt-free in 18 months",
+    "input": "total_debt: $8000, monthly_budget: $400, target_timeline: 18_months",
+    "output": "**18-Month Debt Freedom Plan:**\n\n**Target Analysis:**\n- Required monthly payment: $445\n- Your budget: $400\n- **Gap: -$45/month** ❌\n\n**Revised Realistic Plan:**\n**Option 1:** 21-month payoff with $400/month\n- Total interest: $890\n- **Strategy Score: 8.7/10**\n\n**Option 2:** Achieve 18-month goal\n- Increase income by $50/month (side gig)\n- Reduce expenses by $25/month\n- **Enhanced payment: $425/month**\n- **Strategy Score: 9.4/10**\n\n**📊 Month-by-Month Breakdown:**\n```\nMonth 1-6:  $8000 → $5500 (aggressive start)\nMonth 7-12: $5500 → $2800 (steady progress)\nMonth 13-18: $2800 → $0 (final push)\n```\n\n**💡 Optimization Tips:**\n- Use tax refund for extra payment\n- Apply raises directly to debt\n- Consider balance transfer for lower interest"
+  },
+  {
+    "instruction": "What's the best credit card strategy for building credit while paying off debt?",
+    "input": "current_score: 580, has_debt: yes, wants_to_build_credit: yes",
+    "output": "**Credit Building + Debt Payoff Strategy:**\n\n**Phase 1: Stabilize (Months 1-3)**\n✅ Keep existing cards open (credit history)\n✅ Pay minimums on time (35% of credit score)\n✅ Get RBC Secured Visa ($0 fee, builds credit)\n✅ Keep utilization under 30%\n\n**Phase 2: Optimize (Months 4-12)**\n✅ Focus debt payoff on highest interest cards\n✅ Use secured card for small purchases ($50/month)\n✅ Pay secured card in full monthly\n✅ Monitor credit score monthly\n\n**Phase 3: Graduate (Months 12+)**\n✅ Apply for unsecured card once score >650\n✅ Consider RBC Cashback Preferred (no fee)\n✅ Close secured card after 12 months good history\n\n**📊 Projected Credit Score Timeline:**\n```\nMonth 0:  580 (Starting point)\nMonth 3:  605 (+25 - payment history)\nMonth 6:  635 (+30 - lower utilization)\nMonth 12: 680 (+45 - credit mix + time)\n```\n\n**⚠️ Critical Rules:**\n- Never close oldest card\n- Never miss payments\n- Keep total utilization under 10% when possible"
+  },
+  {
+    "instruction": "I want to use credit card rewards to help pay off debt. What's the best strategy?",
+    "input": "monthly_spend: $2000, current_debt: $6000, looking_for_cashback",
+    "output": "**Rewards-to-Debt Strategy:**\n\n**Card Recommendation:** RBC Cashback Preferred Mastercard\n- **1% unlimited cashback**\n- **$0 annual fee**\n- **Mobile device insurance**\n\n**Monthly Rewards Calculation:**\n- $2000 spend × 1% = $20/month cashback\n- Annual rewards: $240\n- **Apply 100% rewards to debt payoff**\n\n**Enhanced Strategy:**\n- Regular payment: $300/month\n- Cashback bonus: $20/month\n- **Total debt payment: $320/month**\n\n**📊 Impact Analysis:**\n```\nWithout rewards: 21 months to payoff\nWith rewards:    19.5 months to payoff\nInterest saved:  $156\n```\n\n**🎯 Advanced Tactics:**\n1. **Category rotation:** Use different cards for 5% categories\n2. **Sign-up bonuses:** Target cards with $200+ welcome bonus\n3. **Bill payments:** Use card for utilities, insurance (earn rewards)\n\n**⚠️ Critical Warning:**\n- Only works if you pay statement balance in full\n- Never carry balance to chase rewards\n- Interest charges > rewards earned"
+  },
+  {
+    "instruction": "Help me create a point-based scoring system for different debt payoff strategies",
+    "input": "create_scoring_system",
+    "output": "**NAVUS Debt Strategy Scoring System™**\n\n**📊 Scoring Categories (100 points total):**\n\n**1. Interest Savings (30 points)**\n- 25-30 pts: Saves >$1000 in interest\n- 20-24 pts: Saves $500-$999\n- 15-19 pts: Saves $200-$499\n- 10-14 pts: Saves $50-$199\n- 0-9 pts: Saves <$50\n\n**2. Time Efficiency (25 points)**\n- 20-25 pts: Payoff >12 months faster\n- 15-19 pts: Payoff 6-12 months faster\n- 10-14 pts: Payoff 3-6 months faster\n- 5-9 pts: Payoff 1-3 months faster\n- 0-4 pts: Same timeline\n\n**3. Feasibility (20 points)**\n- 18-20 pts: Easily achievable with current income\n- 14-17 pts: Requires minor lifestyle changes\n- 10-13 pts: Requires moderate sacrifice\n- 5-9 pts: Requires major lifestyle overhaul\n- 0-4 pts: Unrealistic with current situation\n\n**4. Credit Impact (15 points)**\n- 13-15 pts: Significantly improves credit score\n- 10-12 pts: Moderately improves credit\n- 7-9 pts: Neutral credit impact\n- 4-6 pts: Slightly negative impact\n- 0-3 pts: Damages credit score\n\n**5. Risk Level (10 points)**\n- 9-10 pts: Very low risk\n- 7-8 pts: Low risk\n- 5-6 pts: Moderate risk\n- 3-4 pts: High risk\n- 0-2 pts: Very high risk\n\n**📈 Strategy Ratings:**\n- **90-100**: Excellent Strategy ⭐⭐⭐⭐⭐\n- **80-89**: Very Good Strategy ⭐⭐⭐⭐\n- **70-79**: Good Strategy ⭐⭐⭐\n- **60-69**: Fair Strategy ⭐⭐\n- **Below 60**: Poor Strategy ⭐"
+  }
+]
