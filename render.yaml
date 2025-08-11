@@ -3,16 +3,8 @@ services:
     name: navus-enhanced
     env: python
     plan: starter
-    buildCommand: "pip install -r requirements-production.txt && cd Scripts && python generate_massive_dataset.py"
-    startCommand: "cd WebApp && streamlit run enhanced_backend.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true"
+    buildCommand: "pip install -r requirements-production.txt"
+    startCommand: "cd WebApp && python backend_production.py"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
-      - key: STREAMLIT_SERVER_HEADLESS
-        value: "true"
-      - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
-        value: "false"
-      - key: STREAMLIT_THEME_BASE
-        value: "dark"
-      - key: STREAMLIT_SERVER_ENABLE_CORS
-        value: "true"
