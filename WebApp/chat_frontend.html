@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAVUS - AI Financial Advisor Chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .chat-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+        }
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        .message.assistant .message-content {
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+        }
+        .chat-input button {
+            margin-left: 10px;
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .chat-input button:hover {
+            background: #5a6fd8;
+        }
+        .chat-input button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .preset-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+        .preset-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🏦 NAVUS Financial Advisor</h1>
+            <p>AI-powered credit card and debt advice for Canadians</p>
+        </div>
+        
+        <div class="preset-questions" id="presetQuestions">
+            <div class="preset-btn" onclick="sendMessage('What\'s the best travel credit card in Canada?')">Best Travel Card</div>
+            <div class="preset-btn" onclick="sendMessage('Help me pay off credit card debt faster')">Debt Payoff Help</div>
+            <div class="preset-btn" onclick="sendMessage('Best cashback card for groceries?')">Cashback Cards</div>
+            <div class="preset-btn" onclick="sendMessage('First credit card for students?')">Student Cards</div>
+            <div class="preset-btn" onclick="sendMessage('Compare RBC vs TD credit cards')">Bank Comparison</div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content">
+                    👋 Hi! I'm NAVUS, your AI financial advisor for Canadian credit cards and debt management. 
+                    How can I help you optimize your finances today?
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Ask about credit cards, debt payoff, or financial advice..." 
+                   onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://navus-api.onrender.com';
+        
+        async function sendMessage(predefinedMessage = null) {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            
+            const message = predefinedMessage || input.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_history: [],
+                        user_profile: {}
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addMessage(data.response, 'assistant');
+                
+                // Add suggested questions if available
+                if (data.suggested_questions && data.suggested_questions.length > 0) {
+                    setTimeout(() => {
+                        const suggestionsDiv = document.createElement('div');
+                        suggestionsDiv.className = 'message assistant';
+                        suggestionsDiv.innerHTML = `
+                            <div class="message-content">
+                                <strong>💡 You might also ask:</strong><br>
+                                ${data.suggested_questions.map(q => 
+                                    `<span class="preset-btn" onclick="sendMessage('${q.replace(/'/g, "\\'")}')" style="display: inline-block; margin: 5px 5px 0 0;">${q}</span>`
+                                ).join('')}
+                            </div>
+                        `;
+                        chatMessages.appendChild(suggestionsDiv);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            }
+            
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+        }
+        
+        function addMessage(content, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Hide preset questions after first interaction
+        let firstMessage = true;
+        const originalSendMessage = sendMessage;
+        sendMessage = function(predefinedMessage = null) {
+            if (firstMessage) {
+                document.getElementById('presetQuestions').style.display = 'none';
+                firstMessage = false;
+            }
+            return originalSendMessage(predefinedMessage);
+        };
+    </script>
+</body>
+</html>
