@@ -456,29 +456,144 @@
             }
         }
 
-        /* Responsive */
+        /* Mobile hamburger menu */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        /* Enhanced mobile responsiveness */
         @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
             .sidebar {
-                width: 280px;
+                width: 320px;
                 transform: translateX(-100%);
                 position: fixed;
                 top: 0;
                 left: 0;
                 height: 100vh;
                 z-index: 1000;
+                transition: transform 0.3s ease;
+                box-shadow: var(--shadow-lg);
             }
 
             .sidebar.open {
                 transform: translateX(0);
             }
 
+            .mobile-overlay.show {
+                display: block;
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
+            .chat-header {
+                padding-left: 70px; /* Make room for hamburger menu */
+            }
+
+            .chat-messages {
+                padding: 16px 12px;
+            }
+
             .message {
-                max-width: 90%;
+                max-width: 95%;
+            }
+
+            .message-content {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .chat-input-container {
+                padding: 16px 12px;
+            }
+
+            .chat-input {
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+
+            .chart-container img {
+                max-width: 100%;
+                height: auto;
+            }
+
+            /* Smaller text on mobile for better readability */
+            .brand-text {
+                font-size: 18px;
+            }
+
+            .chat-title {
+                font-size: 16px;
+            }
+
+            .chat-subtitle {
+                font-size: 12px;
+            }
+        }
+
+        /* Extra small mobile devices */
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 300px;
+            }
+
+            .message-content {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .chat-input-container {
+                padding: 12px 8px;
+            }
+
+            .chart-container {
+                margin: 8px 0;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
@@ -565,7 +680,10 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8003';  // OpenAI GPT-3.5-turbo (INTELLIGENT RESPONSES + CHARTS)
+        // Detect if running on mobile/different device and adjust API URL accordingly
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8003'  // Local development
+            : 'https://navus-api.onrender.com';  // Production API (you'll need to deploy this)
         let currentChatId = 'chat-' + Date.now();
         let chatHistory = {};
         
@@ -652,92 +770,6 @@
             updateChatHistory();
         }
         
-        async function sendMessage(predefinedMessage = null) {
-            const input = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendBtn');
-            const chatMessages = document.getElementById('chatMessages');
-            
-            const message = predefinedMessage || input.value.trim();
-            if (!message) return;
-            
-            // Add user message
-            addMessage(message, 'user');
-            input.value = '';
-            autoResize(input);
-            sendBtn.disabled = true;
-            
-            // Show loading
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message assistant';
-            loadingDiv.innerHTML = `
-                <div class="message-avatar">🏦</div>
-                <div class="message-content">
-                    <div class="loading">
-                        <span>Thinking</span>
-                        <div class="loading-dots">
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            chatMessages.appendChild(loadingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            
-            try {
-                const response = await fetch(`${API_URL}/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        conversation_history: getChatHistory(),
-                        user_profile: {}
-                    })
-                });
-                
-                chatMessages.removeChild(loadingDiv);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                addMessage(data.response, 'assistant');
-                
-                // Display chart if available
-                if (data.chart_data) {
-                    const chartDiv = document.createElement('div');
-                    chartDiv.className = 'chart-container';
-                    chartDiv.innerHTML = `
-                        <img src="data:image/png;base64,${data.chart_data}" 
-                             alt="Financial Chart">
-                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 12px;">
-                            📊 Generated chart based on your financial scenario
-                            <button onclick="downloadChart('${data.chart_data}')" 
-                                    style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
-                                💾 Download PNG
-                            </button>
-                        </div>
-                    `;
-                    chatMessages.appendChild(chartDiv);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-                
-                // Save to chat history
-                saveChatMessage(message, 'user');
-                saveChatMessage(data.response, 'assistant');
-                
-            } catch (error) {
-                chatMessages.removeChild(loadingDiv);
-                console.error('Error:', error);
-                addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
-            }
-            
-            sendBtn.disabled = false;
-        }
         
         function addMessage(content, sender) {
             const chatMessages = document.getElementById('chatMessages');
@@ -834,6 +866,134 @@
             link.href = 'data:image/png;base64,' + base64Data;
             link.download = 'navus-financial-chart-' + new Date().toISOString().slice(0,10) + '.png';
             link.click();
+        }
+        
+        // Mobile sidebar functionality
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+        
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
+        
+        // Detect mobile device and adjust behavior
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+        
+        // Close mobile sidebar when clicking links (better UX)
+        function handleMobileNavigation() {
+            if (isMobile()) {
+                closeMobileSidebar();
+            }
+        }
+        
+        // Enhanced error handling for mobile API connections
+        async function sendMessage(predefinedMessage = null) {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            
+            const message = predefinedMessage || input.value.trim();
+            if (!message) return;
+            
+            // Close mobile sidebar on message send
+            if (isMobile()) {
+                closeMobileSidebar();
+            }
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            autoResize(input);
+            sendBtn.disabled = true;
+            
+            // Show loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.innerHTML = `
+                <div class="message-avatar">🏦</div>
+                <div class="message-content">
+                    <div class="loading">
+                        <span>Thinking</span>
+                        <div class="loading-dots">
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_history: getChatHistory(),
+                        user_profile: {}
+                    })
+                });
+                
+                chatMessages.removeChild(loadingDiv);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addMessage(data.response, 'assistant');
+                
+                // Display chart if available
+                if (data.chart_data) {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart-container';
+                    chartDiv.innerHTML = `
+                        <img src="data:image/png;base64,${data.chart_data}" 
+                             alt="Financial Chart">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                            📊 Generated chart based on your financial scenario
+                            <button onclick="downloadChart('${data.chart_data}')" 
+                                    style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                                💾 Download PNG
+                            </button>
+                        </div>
+                    `;
+                    chatMessages.appendChild(chartDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                
+                // Save to chat history
+                saveChatMessage(message, 'user');
+                saveChatMessage(data.response, 'assistant');
+                
+            } catch (error) {
+                chatMessages.removeChild(loadingDiv);
+                console.error('Error:', error);
+                
+                // Enhanced mobile error handling
+                const errorMessage = isMobile() 
+                    ? 'Having trouble connecting. Please check your internet connection and try again.'
+                    : 'Sorry, I encountered an error. Please try again.';
+                    
+                addMessage(errorMessage, 'assistant');
+            }
+            
+            sendBtn.disabled = false;
         }
         
         // Initialize
