@@ -1,0 +1,1 @@
+web: cd WebApp && python backend_openai_gpt4.py
