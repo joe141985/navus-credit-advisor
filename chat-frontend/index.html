@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>NAVUS - AI Financial Advisor</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -58,13 +60,21 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
             overflow: hidden;
             transition: all 0.3s ease;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
         }
 
         .app-container {
             display: flex;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height */
+            width: 100%;
+            position: relative;
         }
 
         /* Sidebar */
@@ -486,6 +496,14 @@
 
         /* Enhanced mobile responsiveness */
         @media (max-width: 768px) {
+            body {
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+                position: fixed;
+                touch-action: manipulation; /* Prevent double-tap zoom */
+            }
+
             .mobile-menu-btn {
                 display: flex;
                 align-items: center;
@@ -499,9 +517,12 @@
                 top: 0;
                 left: 0;
                 height: 100vh;
+                height: 100dvh;
                 z-index: 1000;
                 transition: transform 0.3s ease;
                 box-shadow: var(--shadow-lg);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .sidebar.open {
@@ -514,31 +535,64 @@
 
             .main-content {
                 width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                display: flex;
+                flex-direction: column;
+                position: relative;
             }
 
             .chat-header {
-                padding-left: 70px; /* Make room for hamburger menu */
+                padding: 12px 16px 12px 70px; /* Make room for hamburger menu */
+                flex-shrink: 0;
+                min-height: 60px;
+                display: flex;
+                align-items: center;
             }
 
             .chat-messages {
-                padding: 16px 12px;
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px;
+                min-height: 0; /* Important for flex child */
             }
 
             .message {
                 max-width: 95%;
+                margin-bottom: 16px;
             }
 
             .message-content {
                 padding: 12px 16px;
                 font-size: 14px;
+                line-height: 1.5;
             }
 
             .chat-input-container {
-                padding: 16px 12px;
+                padding: 12px;
+                flex-shrink: 0;
+                background: var(--bg-primary);
+                border-top: 1px solid var(--border);
+                position: relative;
+                /* Ensure input is always visible */
+                min-height: 70px;
+            }
+
+            .chat-input-wrapper {
+                max-width: none;
+                margin: 0;
             }
 
             .chat-input {
                 font-size: 16px; /* Prevent zoom on iOS */
+                min-height: 40px;
+                border-radius: 20px;
+            }
+
+            .send-btn {
+                width: 40px;
+                height: 40px;
             }
 
             .chart-container img {
@@ -557,6 +611,15 @@
 
             .chat-subtitle {
                 font-size: 12px;
+                display: none; /* Hide subtitle on very small screens */
+            }
+
+            /* Fix iPhone viewport issues */
+            .app-container {
+                height: 100vh;
+                height: 100dvh;
+                max-height: 100vh;
+                max-height: 100dvh;
             }
         }
 
@@ -680,10 +743,20 @@
     </div>
 
     <script>
-        // Detect if running on mobile/different device and adjust API URL accordingly
-        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:8003'  // Local development
-            : 'https://navus-api.onrender.com';  // Production API (you'll need to deploy this)
+        // Smart API URL detection for mobile and desktop
+        function getAPIURL() {
+            // If accessing from mobile (not localhost), use the computer's IP
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                // Mobile device accessing the app - connect to the Mac's IP address
+                return 'http://192.168.1.76:8003';  // Your Mac's IP address
+            }
+            return 'http://localhost:8003';  // Desktop/localhost
+        }
+        const API_URL = getAPIURL();
+        
+        // Debug logging to help troubleshoot
+        console.log('Current hostname:', window.location.hostname);
+        console.log('API URL:', API_URL);
         let currentChatId = 'chat-' + Date.now();
         let chatHistory = {};
         
