@@ -390,31 +390,102 @@ Respond as the expert Canadian financial advisor NAVUS."""
                     logger.info(f"Chart detection - User: '{user_lower[:100]}...'")
                     logger.info(f"Chart detection - Response: '{lower_text[:100]}...'")
                     
-                    # Debt payoff scenarios
-                    debt_keywords = ["payoff", "pay off", "debt", "balance", "payment", "avalanche", "snowball", "strategy"]
-                    debt_match = any(keyword in lower_text or keyword in user_lower for keyword in debt_keywords)
-                    logger.info(f"Debt keywords match: {debt_match}")
+                    # Debt payoff scenarios - MUCH MORE SPECIFIC matching
+                    debt_keywords = ["pay off", "payoff", "debt strategy", "debt plan", "payment plan"]
+                    debt_exclusions = ["student", "credit card for", "first credit", "best card", "which card"]
+                    
+                    # Only match if debt keywords AND no exclusions AND contains debt amounts or payment terms
+                    has_debt_keyword = any(keyword in user_lower for keyword in debt_keywords)
+                    has_exclusion = any(exclusion in user_lower for exclusion in debt_exclusions)
+                    has_debt_context = any(word in user_lower for word in ["$", "debt", "balance", "owe", "monthly payment", "interest rate", "apr"])
+                    
+                    debt_match = has_debt_keyword and not has_exclusion and has_debt_context
+                    logger.info(f"Debt keywords match: {debt_match} (keyword:{has_debt_keyword}, exclusion:{has_exclusion}, context:{has_debt_context})")
                     
                     if debt_match:
+                        # Extract actual user data for contextual charts
+                        import re
+                        debt_amount = 5000  # default
+                        interest_rate = 0.19  # default 19%
+                        min_payment = 125  # default
+                        
+                        # Try to extract debt amount
+                        amounts = re.findall(r'\$?([0-9,]+)', user_message)
+                        if amounts:
+                            try:
+                                debt_amount = int(amounts[0].replace(',', ''))
+                            except:
+                                pass
+                        
+                        # Try to extract interest rate
+                        rates = re.findall(r'(\d+(?:\.\d+)?)%', user_message)
+                        if rates:
+                            try:
+                                interest_rate = float(rates[0]) / 100
+                            except:
+                                pass
+                        
+                        # Calculate realistic payments
+                        min_payment = max(25, debt_amount * 0.025)  # 2.5% minimum or $25
+                        accelerated_payment = min_payment * 2.5
+                        
+                        # Generate contextual chart data
+                        months = list(range(1, min(37, int(debt_amount/min_payment) + 12)))
+                        balances = []
+                        current_balance = debt_amount
+                        
+                        for month in months:
+                            interest = current_balance * (interest_rate / 12)
+                            principal = accelerated_payment - interest
+                            current_balance = max(0, current_balance - principal)
+                            balances.append(current_balance)
+                            if current_balance <= 0:
+                                break
+                        
                         chart_data = self.create_financial_chart("debt_payoff", {
-                            "months": list(range(1, 37)),
-                            "balances": [10000 - (i * 280) for i in range(1, 37)],
-                            "interest_saved": [i * 25 for i in range(1, 37)]
+                            "months": months[:len(balances)],
+                            "balances": balances,
+                            "interest_saved": [i * (interest_rate * debt_amount / 12) for i in range(len(balances))]
                         })
                     
-                    # Card comparison scenarios  
-                    elif any(keyword in lower_text or keyword in user_lower for keyword in ["compare", "comparison", "vs", "versus", "best card", "which card"]):
+                    # Card comparison scenarios - Only for explicit comparisons
+                    elif ("compare" in user_lower and ("card" in user_lower or "credit" in user_lower)) or \
+                         ("vs" in user_lower and "card" in user_lower) or \
+                         ("versus" in user_lower and "card" in user_lower):
                         chart_data = self.create_financial_chart("card_comparison", {
                             "cards": ["Amex Cobalt", "RBC Avion", "TD Cashback", "Scotia Gold"],
                             "rewards": [5.0, 1.25, 3.0, 5.0],
                             "fees": [0, 120, 139, 139]
                         })
                     
-                    # Credit score scenarios
-                    elif any(keyword in lower_text or keyword in user_lower for keyword in ["credit score", "improve credit", "build credit", "score"]):
+                    # Credit score scenarios - Only for explicit credit score improvement queries
+                    elif ("credit score" in user_lower and ("improve" in user_lower or "build" in user_lower or "increase" in user_lower)) or \
+                         ("improve credit" in user_lower) or \
+                         ("build credit" in user_lower and "score" in user_lower):
+                        # Extract starting score if provided
+                        import re
+                        starting_score = 620  # default
+                        scores_found = re.findall(r'(\d{3})', user_message)
+                        if scores_found:
+                            for score in scores_found:
+                                score_int = int(score)
+                                if 300 <= score_int <= 850:  # Valid credit score range
+                                    starting_score = score_int
+                                    break
+                        
+                        # Generate realistic improvement timeline
+                        target_score = min(starting_score + 150, 780)
+                        months = list(range(1, 25))
+                        scores = []
+                        for month in months:
+                            # Realistic improvement curve - faster initially, then slows down
+                            improvement = (target_score - starting_score) * (1 - (0.95 ** month))
+                            score = min(target_score, starting_score + improvement)
+                            scores.append(int(score))
+                        
                         chart_data = self.create_financial_chart("credit_score", {
-                            "months": list(range(1, 25)),
-                            "scores": [620 + (i * 12) for i in range(1, 25)]
+                            "months": months,
+                            "scores": scores
                         })
                     
                     return generated_text, chart_data
