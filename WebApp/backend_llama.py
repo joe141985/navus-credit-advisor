@@ -16,6 +16,12 @@ import asyncio
 from datetime import datetime
 import httpx
 import time
+import base64
+import io
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend
+import numpy as np
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +53,7 @@ class ChatResponse(BaseModel):
     confidence: Optional[float] = None
     suggested_questions: Optional[List[str]] = []
     processing_time: Optional[float] = None
+    chart_data: Optional[str] = None  # Base64 encoded chart
 
 class HealthResponse(BaseModel):
     status: str

@@ -382,21 +382,36 @@ Respond as the expert Canadian financial advisor NAVUS."""
                     result = response.json()
                     generated_text = result['choices'][0]['message']['content']
                     
-                    # Extract chart hints and generate charts
+                    # Extract chart hints and generate charts (improved detection)
                     chart_data = None
-                    if "debt_payoff_timeline" in generated_text.lower():
+                    lower_text = generated_text.lower()
+                    user_lower = messages[-1]["content"].lower()  # Get user message from messages
+                    
+                    logger.info(f"Chart detection - User: '{user_lower[:100]}...'")
+                    logger.info(f"Chart detection - Response: '{lower_text[:100]}...'")
+                    
+                    # Debt payoff scenarios
+                    debt_keywords = ["payoff", "pay off", "debt", "balance", "payment", "avalanche", "snowball", "strategy"]
+                    debt_match = any(keyword in lower_text or keyword in user_lower for keyword in debt_keywords)
+                    logger.info(f"Debt keywords match: {debt_match}")
+                    
+                    if debt_match:
                         chart_data = self.create_financial_chart("debt_payoff", {
                             "months": list(range(1, 37)),
                             "balances": [10000 - (i * 280) for i in range(1, 37)],
                             "interest_saved": [i * 25 for i in range(1, 37)]
                         })
-                    elif "card_comparison" in generated_text.lower():
+                    
+                    # Card comparison scenarios  
+                    elif any(keyword in lower_text or keyword in user_lower for keyword in ["compare", "comparison", "vs", "versus", "best card", "which card"]):
                         chart_data = self.create_financial_chart("card_comparison", {
                             "cards": ["Amex Cobalt", "RBC Avion", "TD Cashback", "Scotia Gold"],
                             "rewards": [5.0, 1.25, 3.0, 5.0],
                             "fees": [0, 120, 139, 139]
                         })
-                    elif "credit_score" in generated_text.lower():
+                    
+                    # Credit score scenarios
+                    elif any(keyword in lower_text or keyword in user_lower for keyword in ["credit score", "improve credit", "build credit", "score"]):
                         chart_data = self.create_financial_chart("credit_score", {
                             "months": list(range(1, 25)),
                             "scores": [620 + (i * 12) for i in range(1, 25)]
