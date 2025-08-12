@@ -157,7 +157,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://navus-api.onrender.com';
+        const API_URL = 'http://localhost:8002';  // Use enhanced GPT-OSS backend locally
         
         async function sendMessage(predefinedMessage = null) {
             const input = document.getElementById('messageInput');
@@ -192,6 +192,24 @@
                 
                 const data = await response.json();
                 addMessage(data.response, 'assistant');
+                
+                // Display chart if available
+                if (data.chart_data) {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'message assistant';
+                    chartDiv.innerHTML = `
+                        <div class="message-content" style="text-align: center;">
+                            <img src="data:image/png;base64,${data.chart_data}" 
+                                 style="max-width: 100%; border-radius: 8px; margin: 10px 0;"
+                                 alt="Financial Chart">
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                📊 Generated chart based on your financial scenario
+                            </small>
+                        </div>
+                    `;
+                    chatMessages.appendChild(chartDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
                 
                 // Add suggested questions if available
                 if (data.suggested_questions && data.suggested_questions.length > 0) {
