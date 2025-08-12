@@ -195,7 +195,7 @@ RESPONSE (be helpful, specific, and Canadian-focused):"""
     async def generate_llama_response(self, prompt: str) -> str:
         """Generate response using local Llama 3.1"""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
                     f"{self.ollama_url}/api/generate",
                     json={

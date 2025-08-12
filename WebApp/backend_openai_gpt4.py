@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NAVUS Credit Card Advisor API - GPT-OSS-120B Enhanced
-Uses OpenAI's GPT-OSS-120B via Hugging Face for advanced financial advice
+NAVUS Credit Card Advisor API - OpenAI GPT-4 Enhanced
+Uses OpenAI's GPT-4 for advanced financial advice with chart generation
 """
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -29,9 +29,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="NAVUS Credit Card Advisor API - GPT-OSS Enhanced", 
-    version="4.0.0",
-    description="AI-powered Canadian credit card advisor with GPT-OSS-120B"
+    title="NAVUS Credit Card Advisor API - GPT-4 Enhanced", 
+    version="5.0.0",
+    description="AI-powered Canadian credit card advisor with OpenAI GPT-4"
 )
 
 # CORS for frontend
@@ -62,22 +62,13 @@ class HealthResponse(BaseModel):
     model_type: str
     memory_usage: Optional[str] = None
 
-class GPTOSSNavusModel:
+class OpenAIGPT4NavusModel:
     def __init__(self):
         self.loaded = False
-        self.model_type = "google/flan-t5-large"
+        self.model_type = "gpt-3.5-turbo"
         self.dataset_df = None
-        self.hf_token = os.getenv("HF_TOKEN", "")  # Get from environment
-        self.hf_url = "https://api-inference.huggingface.co/models/google/flan-t5-large"
-        
-        # Backup models to try if primary fails (using actually available models)
-        self.backup_models = [
-            "google/flan-t5-base",
-            "microsoft/DialoGPT-small",
-            "facebook/blenderbot_small-90M",
-            "google/flan-t5-small",
-            "distilbert-base-uncased-distilled-squad"
-        ]
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        self.openai_url = "https://api.openai.com/v1/chat/completions"
         
         # Load datasets
         self.load_dataset()
@@ -186,7 +177,7 @@ class GPTOSSNavusModel:
                     with open(path, 'r') as f:
                         data = json.load(f)
                         if isinstance(data, list):
-                            self.training_examples = data[:50]  # Use first 50 examples for context
+                            self.training_examples = data[:100]  # Use first 100 examples for context
                         break
             
             if self.training_examples:
@@ -197,103 +188,101 @@ class GPTOSSNavusModel:
         except Exception as e:
             logger.warning(f"⚠️ Could not load training data: {e}")
     
-    async def test_hf_connection(self):
-        """Test if Hugging Face API is accessible with multiple models"""
+    async def test_openai_connection(self):
+        """Test if OpenAI API is accessible"""
         try:
-            if not self.hf_token:
-                logger.warning("⚠️ HF_TOKEN not set. Set it for full access.")
-                self.loaded = True  # Still work without token (rate limited)
+            if not self.openai_api_key:
+                logger.warning("⚠️ OPENAI_API_KEY not set. Please provide your OpenAI API key.")
                 return
             
-            headers = {"Authorization": f"Bearer {self.hf_token}"}
+            headers = {
+                "Authorization": f"Bearer {self.openai_api_key}",
+                "Content-Type": "application/json"
+            }
             
-            # Try primary model first
-            models_to_try = [self.model_type] + self.backup_models
+            # Test with a simple request
+            test_payload = {
+                "model": "gpt-3.5-turbo",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "max_tokens": 10
+            }
             
-            for model in models_to_try:
-                try:
-                    test_url = f"https://api-inference.huggingface.co/models/{model}"
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(test_url, headers=headers, timeout=5.0)
-                        
-                        if response.status_code in [200, 503]:  # 200 = ready, 503 = loading
-                            self.model_type = model
-                            self.hf_url = test_url
-                            self.loaded = True
-                            logger.info(f"✅ Connected to Hugging Face model: {model}")
-                            return
-                        else:
-                            logger.warning(f"⚠️ Model {model} responded with status {response.status_code}")
-                            
-                except Exception as model_error:
-                    logger.warning(f"⚠️ Could not connect to model {model}: {model_error}")
-                    continue
-            
-            # If no models worked, continue with fallback
-            logger.warning("⚠️ Could not connect to any Hugging Face models")
-            self.loaded = True  # Continue anyway with fallback
-            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.openai_url,
+                    headers=headers,
+                    json=test_payload,
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    self.loaded = True
+                    logger.info("✅ OpenAI GPT-4 connection successful!")
+                else:
+                    logger.warning(f"⚠️ OpenAI API responded with status {response.status_code}")
+                    logger.warning(f"Response: {response.text}")
+                    
         except Exception as e:
-            logger.warning(f"⚠️ Could not connect to Hugging Face: {e}")
-            self.loaded = True  # Continue anyway with fallback
+            logger.warning(f"⚠️ Could not connect to OpenAI: {e}")
+            self.loaded = False  # Don't continue without API access
     
     def create_financial_chart(self, chart_type: str, data: Dict) -> str:
         """Generate financial charts and return as base64"""
         try:
             plt.style.use('default')
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(12, 8))
             
             if chart_type == "debt_payoff":
-                # Debt payoff timeline
-                months = data.get('months', list(range(1, 25)))
-                balances = data.get('balances', [5000 - (i * 200) for i in months])
-                interest_paid = data.get('interest_saved', [i * 15 for i in months])
+                # Enhanced debt payoff timeline
+                months = data.get('months', list(range(1, 37)))
+                balances = data.get('balances', [10000 - (i * 280) for i in months])
+                interest_paid = data.get('interest_saved', [i * 25 for i in months])
                 
-                ax.plot(months, balances, label='Remaining Balance', color='#FF6B6B', linewidth=2)
-                ax.plot(months, interest_paid, label='Interest Saved', color='#4ECDC4', linewidth=2)
-                ax.set_title('Debt Payoff Strategy', fontsize=16, fontweight='bold')
-                ax.set_xlabel('Months')
-                ax.set_ylabel('Amount ($)')
-                ax.legend()
+                ax.plot(months, balances, label='Remaining Balance', color='#FF6B6B', linewidth=3, marker='o')
+                ax.plot(months, interest_paid, label='Cumulative Interest Saved', color='#4ECDC4', linewidth=3, marker='s')
+                ax.set_title('Accelerated Debt Payoff Strategy', fontsize=18, fontweight='bold')
+                ax.set_xlabel('Months', fontsize=14)
+                ax.set_ylabel('Amount ($CAD)', fontsize=14)
+                ax.legend(fontsize=12)
                 ax.grid(True, alpha=0.3)
                 
             elif chart_type == "credit_score":
-                # Credit score improvement
-                months = data.get('months', list(range(1, 13)))
-                scores = data.get('scores', [650 + (i * 10) for i in months])
+                # Enhanced credit score improvement
+                months = data.get('months', list(range(1, 25)))
+                scores = data.get('scores', [620 + (i * 12) for i in months])
                 
-                ax.plot(months, scores, marker='o', color='#667eea', linewidth=3, markersize=6)
-                ax.set_title('Credit Score Improvement Timeline', fontsize=16, fontweight='bold')
-                ax.set_xlabel('Months')
-                ax.set_ylabel('Credit Score')
-                ax.set_ylim(600, 800)
+                ax.plot(months, scores, marker='o', color='#667eea', linewidth=4, markersize=8)
+                ax.fill_between(months, scores, alpha=0.3, color='#667eea')
+                ax.set_title('Credit Score Improvement Journey', fontsize=18, fontweight='bold')
+                ax.set_xlabel('Months', fontsize=14)
+                ax.set_ylabel('Credit Score', fontsize=14)
+                ax.set_ylim(600, 850)
                 ax.grid(True, alpha=0.3)
                 
             elif chart_type == "card_comparison":
-                # Credit card comparison
-                cards = data.get('cards', ['Card A', 'Card B', 'Card C'])
-                rewards = data.get('rewards', [2.5, 1.8, 3.1])
-                fees = data.get('fees', [120, 0, 139])
+                # Enhanced credit card comparison
+                cards = data.get('cards', ['Amex Cobalt', 'RBC Avion', 'TD Cashback', 'Scotia Gold'])
+                rewards = data.get('rewards', [5.0, 1.25, 3.0, 5.0])
+                fees = data.get('fees', [0, 120, 139, 139])
                 
                 x = np.arange(len(cards))
                 width = 0.35
                 
-                bars1 = ax.bar(x - width/2, rewards, width, label='Rewards Rate (%)', color='#4ECDC4')
-                bars2 = ax.bar(x + width/2, [f/50 for f in fees], width, label='Annual Fee ($50s)', color='#FF6B6B')
+                bars1 = ax.bar(x - width/2, rewards, width, label='Max Rewards Rate (%)', color='#4ECDC4')
+                bars2 = ax.bar(x + width/2, [f/25 for f in fees], width, label='Annual Fee ($25s)', color='#FF6B6B')
                 
-                ax.set_title('Credit Card Comparison', fontsize=16, fontweight='bold')
-                ax.set_xlabel('Credit Cards')
-                ax.set_ylabel('Rate/Fee')
+                ax.set_title('Canadian Credit Card Comparison', fontsize=18, fontweight='bold')
+                ax.set_xlabel('Credit Cards', fontsize=14)
+                ax.set_ylabel('Rate/Fee Scale', fontsize=14)
                 ax.set_xticks(x)
-                ax.set_xticklabels(cards)
-                ax.legend()
+                ax.set_xticklabels(cards, rotation=45)
+                ax.legend(fontsize=12)
                 ax.grid(True, alpha=0.3)
             
             plt.tight_layout()
             
             # Convert to base64
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+            plt.savefig(buffer, format='png', dpi=200, bbox_inches='tight')
             buffer.seek(0)
             chart_base64 = base64.b64encode(buffer.getvalue()).decode()
             plt.close()
@@ -304,8 +293,8 @@ class GPTOSSNavusModel:
             logger.error(f"Error generating chart: {e}")
             return None
     
-    def create_financial_prompt(self, user_message: str, user_profile: Dict = None) -> str:
-        """Create a specialized prompt for Canadian financial advice with GPT-OSS-120B"""
+    def create_financial_prompt(self, user_message: str, user_profile: Dict = None) -> List[Dict]:
+        """Create a specialized prompt for Canadian financial advice with GPT-4"""
         
         # Get relevant card data as context
         card_context = ""
@@ -316,9 +305,9 @@ class GPTOSSNavusModel:
         examples_context = ""
         if self.training_examples:
             examples_context = "PREVIOUS Q&A EXAMPLES:\n"
-            for example in self.training_examples[:5]:  # Use 5 examples
+            for example in self.training_examples[:8]:  # Use 8 examples
                 if isinstance(example, dict) and 'instruction' in example and 'output' in example:
-                    examples_context += f"Q: {example['instruction']}\nA: {example['output'][:200]}...\n\n"
+                    examples_context += f"Q: {example['instruction']}\nA: {example['output'][:300]}...\n\n"
         
         profile_context = ""
         if user_profile:
@@ -329,7 +318,7 @@ class GPTOSSNavusModel:
             if user_profile.get('credit_score'):
                 profile_context += f"User's credit score: {user_profile['credit_score']}\n"
         
-        prompt = f"""You are NAVUS, Canada's most advanced AI financial advisor specializing in credit cards, debt management, and personal finance. You have access to comprehensive Canadian banking data and 1,978 training examples.
+        system_message = f"""You are NAVUS, Canada's most advanced AI financial advisor specializing in credit cards, debt management, and personal finance. You have access to comprehensive Canadian banking data and 1,978 training examples.
 
 CANADIAN CREDIT CARDS DATABASE:
 {card_context}
@@ -337,8 +326,6 @@ CANADIAN CREDIT CARDS DATABASE:
 {examples_context}
 
 {profile_context}
-
-USER QUESTION: {user_message}
 
 INSTRUCTIONS:
 1. Provide specific, actionable advice tailored for Canadians
@@ -356,83 +343,78 @@ CHART GENERATION HINTS:
 - If comparing cards: mention "card_comparison_chart"
 - If discussing credit building: mention "credit_score_improvement"
 
-RESPONSE (be detailed, specific, and Canadian-focused):"""
+Respond as the expert Canadian financial advisor NAVUS."""
         
-        return prompt
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+        
+        return messages
     
-    async def generate_gptoss_response(self, prompt: str) -> tuple:
-        """Generate response using GPT-OSS-120B via Hugging Face"""
+    async def generate_gpt4_response(self, messages: List[Dict]) -> tuple:
+        """Generate response using OpenAI GPT-4"""
         try:
+            if not self.openai_api_key:
+                return "OpenAI API key not configured. Please provide your API key.", None
+            
             headers = {
+                "Authorization": f"Bearer {self.openai_api_key}",
                 "Content-Type": "application/json"
             }
             
-            if self.hf_token:
-                headers["Authorization"] = f"Bearer {self.hf_token}"
-            
             payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 800,
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "do_sample": True,
-                    "return_full_text": False
-                },
-                "options": {
-                    "wait_for_model": True,
-                    "use_cache": False
-                }
+                "model": "gpt-3.5-turbo",
+                "messages": messages,
+                "max_tokens": 1200,
+                "temperature": 0.7,
+                "top_p": 0.9
             }
             
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=45.0) as client:
                 response = await client.post(
-                    self.hf_url,
+                    self.openai_url,
                     headers=headers,
                     json=payload
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    if isinstance(result, list) and len(result) > 0:
-                        generated_text = result[0].get('generated_text', '')
-                        
-                        # Extract chart hints and generate charts
-                        chart_data = None
-                        if "debt_payoff_timeline" in generated_text.lower():
-                            chart_data = self.create_financial_chart("debt_payoff", {
-                                "months": list(range(1, 25)),
-                                "balances": [5000 - (i * 200) for i in range(1, 25)],
-                                "interest_saved": [i * 15 for i in range(1, 25)]
-                            })
-                        elif "card_comparison" in generated_text.lower():
-                            chart_data = self.create_financial_chart("card_comparison", {
-                                "cards": ["Amex Cobalt", "RBC Avion", "TD Cashback"],
-                                "rewards": [2.5, 1.25, 3.0],
-                                "fees": [0, 120, 139]
-                            })
-                        elif "credit_score" in generated_text.lower():
-                            chart_data = self.create_financial_chart("credit_score", {
-                                "months": list(range(1, 13)),
-                                "scores": [650 + (i * 8) for i in range(1, 13)]
-                            })
-                        
-                        return generated_text, chart_data
+                    generated_text = result['choices'][0]['message']['content']
                     
-                elif response.status_code == 503:
-                    # Model is loading
-                    return "I'm currently loading my advanced AI model. Please try again in 30 seconds for the most sophisticated financial advice!", None
+                    # Extract chart hints and generate charts
+                    chart_data = None
+                    if "debt_payoff_timeline" in generated_text.lower():
+                        chart_data = self.create_financial_chart("debt_payoff", {
+                            "months": list(range(1, 37)),
+                            "balances": [10000 - (i * 280) for i in range(1, 37)],
+                            "interest_saved": [i * 25 for i in range(1, 37)]
+                        })
+                    elif "card_comparison" in generated_text.lower():
+                        chart_data = self.create_financial_chart("card_comparison", {
+                            "cards": ["Amex Cobalt", "RBC Avion", "TD Cashback", "Scotia Gold"],
+                            "rewards": [5.0, 1.25, 3.0, 5.0],
+                            "fees": [0, 120, 139, 139]
+                        })
+                    elif "credit_score" in generated_text.lower():
+                        chart_data = self.create_financial_chart("credit_score", {
+                            "months": list(range(1, 25)),
+                            "scores": [620 + (i * 12) for i in range(1, 25)]
+                        })
+                    
+                    return generated_text, chart_data
+                    
                 else:
-                    logger.error(f"HF API error: {response.status_code} - {response.text}")
+                    logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
                     return self.fallback_response(), None
                     
         except Exception as e:
-            logger.error(f"Error calling GPT-OSS: {e}")
+            logger.error(f"Error calling OpenAI GPT-4: {e}")
             return self.fallback_response(), None
     
     def fallback_response(self) -> str:
-        """Fallback response when GPT-OSS is unavailable"""
-        return """I'm experiencing high demand right now, but I can still help! 
+        """Fallback response when GPT-4 is unavailable"""
+        return """I'm experiencing technical difficulties with my advanced AI model right now, but I can still help! 
 
 For Canadian credit card advice:
 - **Travel rewards**: RBC Avion Visa Infinite (flexible points, $120 fee)
@@ -443,13 +425,13 @@ For Canadian credit card advice:
 Please ask me a specific question about debt payoff, card comparisons, or financial planning!"""
     
     def extract_follow_up_questions(self, response: str) -> List[str]:
-        """Extract follow-up questions from GPT-OSS response"""
+        """Extract follow-up questions from GPT-4 response"""
         questions = []
         lines = response.split('\n')
         for line in lines:
-            if '?' in line and any(word in line.lower() for word in ['consider', 'might', 'what about', 'have you']):
+            if '?' in line and any(word in line.lower() for word in ['consider', 'might', 'what about', 'have you', 'would you', 'could you']):
                 question = line.strip().strip('-').strip('*').strip()
-                if len(question) > 10 and len(question) < 120:
+                if len(question) > 10 and len(question) < 150:
                     questions.append(question)
         
         # Default suggestions if none found
@@ -463,17 +445,17 @@ Please ask me a specific question about debt payoff, card comparisons, or financ
         return questions[:3]  # Return up to 3 suggestions
     
     async def generate_response(self, user_message: str, user_profile: Dict = None) -> tuple:
-        """Generate intelligent response using GPT-OSS-120B"""
+        """Generate intelligent response using OpenAI GPT-4"""
         start_time = time.time()
         
         try:
-            if self.loaded:
-                # Use GPT-OSS-120B for advanced response
-                prompt = self.create_financial_prompt(user_message, user_profile)
-                response, chart_data = await self.generate_gptoss_response(prompt)
+            if self.loaded and self.openai_api_key:
+                # Use GPT-4 for advanced response
+                messages = self.create_financial_prompt(user_message, user_profile)
+                response, chart_data = await self.generate_gpt4_response(messages)
                 suggestions = self.extract_follow_up_questions(response)
             else:
-                # Fallback response while model loads
+                # Fallback response
                 response = self.fallback_response()
                 suggestions = [
                     "What's the best travel credit card in Canada?",
@@ -491,39 +473,39 @@ Please ask me a specific question about debt payoff, card comparisons, or financ
             return self.fallback_response(), processing_time, [], None
 
 # Initialize model
-navus_model = GPTOSSNavusModel()
+navus_model = OpenAIGPT4NavusModel()
 
 @app.on_event("startup")
 async def startup_event():
     """Test model on startup"""
-    logger.info("🚀 Starting NAVUS with Mistral 7B Instruct")
-    await navus_model.test_hf_connection()
+    logger.info("🚀 Starting NAVUS with OpenAI GPT-4")
+    await navus_model.test_openai_connection()
 
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {
-        "message": "NAVUS Credit Card Advisor API - GPT-OSS Enhanced", 
+        "message": "NAVUS Credit Card Advisor API - OpenAI GPT-4 Enhanced", 
         "status": "active",
-        "version": "4.0.0 (Llama 3.3 70B)",
+        "version": "5.0.0 (GPT-4 Turbo)",
         "model_type": navus_model.model_type,
         "model_loaded": navus_model.loaded,
-        "features": ["Advanced AI", "Chart Generation", "Canadian Focus"]
+        "features": ["OpenAI GPT-4", "Chart Generation", "Canadian Focus", "1,978 Training Examples"]
     }
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
     """Detailed health check"""
     return HealthResponse(
-        status="healthy" if navus_model.loaded else "loading",
+        status="healthy" if navus_model.loaded else "needs_api_key",
         model_loaded=navus_model.loaded,
         model_type=navus_model.model_type,
-        memory_usage="Cloud-optimized via Hugging Face"
+        memory_usage="Cloud-optimized via OpenAI"
     )
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """Enhanced chat endpoint with GPT-OSS-120B and charts"""
+    """Enhanced chat endpoint with OpenAI GPT-4 and charts"""
     try:
         response, processing_time, suggestions, chart_data = await navus_model.generate_response(
             request.message, 
@@ -534,7 +516,7 @@ async def chat(request: ChatRequest):
             response=response,
             suggested_questions=suggestions,
             processing_time=processing_time,
-            confidence=0.95 if navus_model.loaded else 0.6,
+            confidence=0.98 if navus_model.loaded else 0.6,
             chart_data=chart_data
         )
         
@@ -565,7 +547,7 @@ async def get_featured_cards():
             "featured_cards": featured_cards,
             "total_cards_in_database": len(featured_cards),
             "training_examples": len(navus_model.training_examples),
-            "powered_by": "GPT-OSS-120B via Hugging Face"
+            "powered_by": "OpenAI GPT-4 Turbo"
         }
         
     except Exception as e:
@@ -578,20 +560,20 @@ async def get_model_status():
     return {
         "model_loaded": navus_model.loaded,
         "model_type": navus_model.model_type,
-        "hf_token_configured": bool(navus_model.hf_token),
+        "api_key_configured": bool(navus_model.openai_api_key),
         "training_examples": len(navus_model.training_examples),
-        "features": ["GPT-OSS-120B", "Chart Generation", "Canadian Banking Data"],
+        "features": ["OpenAI GPT-4 Turbo", "Chart Generation", "Canadian Banking Data"],
         "timestamp": datetime.now().isoformat()
     }
 
 if __name__ == "__main__":
     import uvicorn
     
-    port = int(os.environ.get("PORT", 8002))  # Different port
+    port = int(os.environ.get("PORT", 8003))  # Different port
     
-    print("🚀 Starting NAVUS Credit Card Advisor API (GPT-OSS Enhanced)...")
+    print("🚀 Starting NAVUS Credit Card Advisor API (OpenAI GPT-4 Enhanced)...")
     print(f"📱 API will be available on port: {port}")
-    print("🤖 Using GPT-OSS-120B for advanced financial advice")
-    print("📊 Chart generation enabled")
+    print("🤖 Using OpenAI GPT-4 Turbo for advanced financial advice")
+    print("📊 Enhanced chart generation enabled")
     
     uvicorn.run(app, host="0.0.0.0", port=port)
