@@ -116,7 +116,13 @@
             letter-spacing: -0.025em;
         }
 
-        .theme-toggle {
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle, .signout-btn {
             background: var(--bg-primary);
             border: 1px solid var(--border);
             border-radius: 50%;
@@ -127,11 +133,18 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
+            font-size: 16px;
         }
 
-        .theme-toggle:hover {
+        .theme-toggle:hover, .signout-btn:hover {
             background: var(--bg-secondary);
             border-color: var(--border-hover);
+        }
+
+        .signout-btn:hover {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
         }
 
         .new-chat-btn {
@@ -238,6 +251,26 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+
+        .login-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .login-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
         }
 
         .chat-title {
@@ -466,6 +499,17 @@
             }
         }
 
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         /* Mobile hamburger menu */
         .mobile-menu-btn {
             display: none;
@@ -492,6 +536,33 @@
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
+        }
+
+        /* Main interface signout button */
+        .main-signout-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1001;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .main-signout-btn:hover {
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3), 0 8px 10px -6px rgba(239, 68, 68, 0.2);
+            background: #dc2626;
         }
 
         /* Enhanced mobile responsiveness */
@@ -653,6 +724,7 @@
             <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
     </button>
+    
 
     <!-- Mobile overlay -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
@@ -665,9 +737,14 @@
                     <div class="logo"></div>
                     <span class="brand-text">NAVUS</span>
                 </div>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
-                    <span class="theme-icon">🌙</span>
-                </button>
+                <div class="header-buttons">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                    <button class="signout-btn" onclick="signOut()" title="Sign out" id="signoutBtn" style="display: none;">
+                        <span>🚪</span>
+                    </button>
+                </div>
             </div>
             
             <button class="new-chat-btn" onclick="startNewChat()">
@@ -709,6 +786,14 @@
                     <div class="chat-title">Financial Advisor Chat</div>
                     <div class="chat-subtitle">AI-powered credit card and debt advice for Canadians</div>
                 </div>
+                <button class="login-btn" onclick="goToLogin()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10,17 15,12 10,7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
+                    Login
+                </button>
             </div>
             
             <div class="chat-messages" id="chatMessages">
@@ -1077,10 +1162,115 @@
             sendBtn.disabled = false;
         }
         
+        // Navigation functions
+        function goToLogin() {
+            window.location.href = './login.html';
+        }
+
+        // Sign out function
+        async function signOut() {
+            try {
+                // Show confirmation dialog
+                if (!confirm('Are you sure you want to sign out?')) {
+                    return;
+                }
+
+                // Call logout endpoint
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                
+                if (data.success || response.ok) {
+                    // Clear session token cookie
+                    document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+                    
+                    // Hide signout buttons
+                    const signoutBtn = document.getElementById('signoutBtn');
+                    if (signoutBtn) signoutBtn.style.display = 'none';
+                    
+                    // Show success message
+                    showSuccessMessage('Successfully signed out!');
+                    
+                    // Clear any user-specific data
+                    currentUser = null;
+                    
+                    // Optional: Redirect to login page or refresh
+                    setTimeout(() => {
+                        window.location.href = './login.html';
+                    }, 1500);
+                } else {
+                    alert('Failed to sign out. Please try again.');
+                }
+            } catch (error) {
+                console.error('Sign out error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+
+        // Check authentication status and show/hide signout button
+        async function checkAuthenticationStatus() {
+            try {
+                const response = await fetch(`${API_URL}/auth/status`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const signoutBtn = document.getElementById('signoutBtn');
+                    const loginBtn = document.querySelector('.login-btn');
+                    
+                    if (data.authenticated) {
+                        // Show signout buttons, hide login button
+                        if (signoutBtn) signoutBtn.style.display = 'flex';
+                        if (loginBtn) loginBtn.style.display = 'none';
+                        currentUser = data.user;
+                        console.log('User authenticated, showing signout buttons');
+                    } else {
+                        // Show login button, hide signout buttons
+                        if (signoutBtn) signoutBtn.style.display = 'none';
+                        if (loginBtn) loginBtn.style.display = 'flex';
+                        console.log('User not authenticated, showing login button');
+                    }
+                }
+            } catch (error) {
+                console.error('Auth status check failed:', error);
+                const signoutBtn = document.getElementById('signoutBtn');
+                const loginBtn = document.querySelector('.login-btn');
+                // Default to showing login button if auth check fails
+                if (signoutBtn) signoutBtn.style.display = 'none';
+                if (loginBtn) loginBtn.style.display = 'flex';
+            }
+        }
+
+        // Show success message
+        function showSuccessMessage(message) {
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                background: var(--success); color: white; padding: 16px;
+                border-radius: 8px; box-shadow: var(--shadow-lg);
+                animation: slideIn 0.3s ease;
+            `;
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 3000);
+        }
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             initializeTheme();
             loadChatHistoryFromStorage();
+            checkAuthenticationStatus();
         });
     </script>
 </body>
