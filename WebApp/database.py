@@ -78,7 +78,7 @@ class ChatMessage(Base):
     conversation_id = Column(String, ForeignKey('conversations.conversation_id'), index=True)
     role = Column(String, index=True)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
-    metadata = Column(Text, nullable=True)  # JSON for chart_data, processing_time, etc.
+    message_metadata = Column(Text, nullable=True)  # JSON for chart_data, processing_time, etc.
     token_count = Column(Integer, nullable=True)  # For token usage tracking
     created_at = Column(DateTime, default=datetime.utcnow)
     

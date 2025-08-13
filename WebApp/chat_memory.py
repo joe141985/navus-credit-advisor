@@ -80,7 +80,7 @@ def save_message(db: Session, conversation: Conversation, role: str, content: st
         conversation_id=conversation.conversation_id,
         role=role,
         content=content,
-        metadata=json.dumps(metadata) if metadata else None,
+        message_metadata=json.dumps(metadata) if metadata else None,
         token_count=estimate_tokens(content)
     )
     
@@ -132,9 +132,9 @@ def get_conversation_history(db: Session, conversation_id: str, limit: int = 50)
         }
         
         # Include metadata if present
-        if message.metadata:
+        if message.message_metadata:
             try:
-                msg_dict["metadata"] = json.loads(message.metadata)
+                msg_dict["metadata"] = json.loads(message.message_metadata)
             except json.JSONDecodeError:
                 pass
         
