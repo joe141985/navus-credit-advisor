@@ -348,6 +348,9 @@ body {
   outline: none;
   transition: border-color 0.2s;
   background: rgba(255, 255, 255, 0.9);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .message-input:focus {
@@ -394,5 +397,18 @@ body {
   
   .message {
     max-width: 90%;
+  }
+  
+  .message-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+  
+  .input-form {
+    padding: 1rem;
+  }
+  
+  .input-container {
+    gap: 0.5rem;
   }
 }

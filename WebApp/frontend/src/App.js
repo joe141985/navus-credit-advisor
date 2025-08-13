@@ -303,7 +303,7 @@ function App() {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask me about Canadian credit cards..."
+                placeholder="Ask about credit cards..."
                 disabled={isLoading}
                 className="message-input"
               />
