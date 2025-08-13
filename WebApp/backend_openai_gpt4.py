@@ -4,7 +4,7 @@ NAVUS Credit Card Advisor API - OpenAI GPT-4 Enhanced
 Uses OpenAI's GPT-4 for advanced financial advice with chart generation
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Cookie
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Cookie, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
