@@ -31,9 +31,9 @@
 
         [data-theme="dark"] {
             /* Dark theme variables */
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-sidebar: #334155;
+            --bg-primary: #212121;
+            --bg-secondary: #181818;
+            --bg-sidebar: #181818;
             --text-primary: #f8fafc;
             --text-secondary: #cbd5e1;
             --text-muted: #64748b;
@@ -1164,7 +1164,9 @@
         
         // Navigation functions
         function goToLogin() {
-            window.location.href = './login.html';
+            const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const loginUrl = isProd ? 'https://navus.chat/login.html' : './login.html';
+            window.location.href = loginUrl;
         }
 
         // Sign out function
@@ -1199,7 +1201,9 @@
                     
                     // Optional: Redirect to login page or refresh
                     setTimeout(() => {
-                        window.location.href = './login.html';
+                        const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const loginUrl = isProd ? 'https://navus.chat/login.html' : './login.html';
+            window.location.href = loginUrl;
                     }, 1500);
                 } else {
                     alert('Failed to sign out. Please try again.');
