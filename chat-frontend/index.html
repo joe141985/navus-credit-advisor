@@ -1,1 +1,1281 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" href="./favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="NAVUS - Your Canadian Credit Card Advisor"/><title>NAVUS - Credit Card Advisor</title><script defer="defer" src="./static/js/main.2d77702e.js"></script><link href="./static/css/main.196b0ba9.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>NAVUS - AI Financial Advisor</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            /* Light theme variables */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-sidebar: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --accent: #667eea;
+            --accent-hover: #5a6fd8;
+            --message-user-bg: #667eea;
+            --message-user-text: #ffffff;
+            --message-assistant-bg: #f1f5f9;
+            --message-assistant-text: #1e293b;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-primary: #212121;
+            --bg-secondary: #181818;
+            --bg-sidebar: #181818;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --border-hover: #475569;
+            --accent: #667eea;
+            --accent-hover: #5a6fd8;
+            --message-user-bg: #667eea;
+            --message-user-text: #ffffff;
+            --message-assistant-bg: #1e293b;
+            --message-assistant-text: #f8fafc;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height */
+            width: 100%;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQ1IiBzdHJva2U9IiMxZTI5M2IiIHN0cm9rZS13aWR0aD0iMTAiLz4KPHN2ZyB4PSIxNSIgeT0iMjAiIHdpZHRoPSI3MCIgaGVpZ2h0PSI2MCI+Cjx0ZXh0IHg9IjM1IiB5PSI0NSIgZm9udC1mYW1pbHk9IkludGVyLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM2IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWUyOTNiIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5OPC90ZXh0Pgo8L3N2Zz4KPC9zdmc+') center/contain no-repeat;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle, .signout-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .theme-toggle:hover, .signout-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-hover);
+        }
+
+        .signout-btn:hover {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .new-chat-btn {
+            margin: 20px;
+            padding: 12px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin: 24px 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .preset-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .preset-btn {
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: left;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            line-height: 1.4;
+        }
+
+        .preset-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .chat-history {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .chat-item {
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            text-align: left;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            line-height: 1.4;
+        }
+
+        .chat-item:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .chat-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Main Chat Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-primary);
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .login-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .login-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chat-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: var(--message-user-bg);
+            color: var(--message-user-text);
+        }
+
+        .message.assistant .message-avatar {
+            background: var(--message-assistant-bg);
+            color: var(--message-assistant-text);
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 14px;
+            text-align: justify;
+            text-justify: inter-word;
+            word-spacing: 0.1em;
+            hyphens: auto;
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+        }
+        
+        .message-content p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .message-content ul, .message-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        .message-content li {
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+        
+        .message-content strong {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .message-content em {
+            font-style: italic;
+            color: var(--text-primary);
+        }
+        
+        .message-content h1, .message-content h2, .message-content h3 {
+            margin: 12px 0 8px 0;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .message-content h1 { font-size: 18px; }
+        .message-content h2 { font-size: 16px; }
+        .message-content h3 { font-size: 15px; }
+
+        .message.user .message-content {
+            background: var(--message-user-bg);
+            color: var(--message-user-text);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: var(--message-assistant-bg);
+            color: var(--message-assistant-text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-container {
+            padding: 20px 24px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .chat-input {
+            flex: 1;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 22px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chart-container {
+            margin: 12px 0;
+            text-align: center;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: loading 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { 
+                transform: scale(0);
+            } 40% { 
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Mobile hamburger menu */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        /* Main interface signout button */
+        .main-signout-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1001;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .main-signout-btn:hover {
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3), 0 8px 10px -6px rgba(239, 68, 68, 0.2);
+            background: #dc2626;
+        }
+
+        /* Enhanced mobile responsiveness */
+        @media (max-width: 768px) {
+            body {
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+                position: fixed;
+                touch-action: manipulation; /* Prevent double-tap zoom */
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sidebar {
+                width: 320px;
+                transform: translateX(-100%);
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                height: 100dvh;
+                z-index: 1000;
+                transition: transform 0.3s ease;
+                box-shadow: var(--shadow-lg);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-overlay.show {
+                display: block;
+            }
+
+            .main-content {
+                width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+            }
+
+            .chat-header {
+                padding: 12px 16px 12px 70px; /* Make room for hamburger menu */
+                flex-shrink: 0;
+                min-height: 60px;
+                display: flex;
+                align-items: center;
+            }
+
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px;
+                min-height: 0; /* Important for flex child */
+            }
+
+            .message {
+                max-width: 95%;
+                margin-bottom: 16px;
+            }
+
+            .message-content {
+                padding: 12px 16px;
+                font-size: 14px;
+                line-height: 1.5;
+            }
+
+            .chat-input-container {
+                padding: 12px;
+                flex-shrink: 0;
+                background: var(--bg-primary);
+                border-top: 1px solid var(--border);
+                position: relative;
+                /* Ensure input is always visible */
+                min-height: 70px;
+            }
+
+            .chat-input-wrapper {
+                max-width: none;
+                margin: 0;
+            }
+
+            .chat-input {
+                font-size: 16px; /* Prevent zoom on iOS */
+                min-height: 40px;
+                border-radius: 20px;
+            }
+
+            .send-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .chart-container img {
+                max-width: 100%;
+                height: auto;
+            }
+
+            /* Smaller text on mobile for better readability */
+            .brand-text {
+                font-size: 18px;
+            }
+
+            .chat-title {
+                font-size: 16px;
+            }
+
+            .chat-subtitle {
+                font-size: 12px;
+                display: none; /* Hide subtitle on very small screens */
+            }
+
+            /* Fix iPhone viewport issues */
+            .app-container {
+                height: 100vh;
+                height: 100dvh;
+                max-height: 100vh;
+                max-height: 100dvh;
+            }
+        }
+
+        /* Extra small mobile devices */
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 300px;
+            }
+
+            .message-content {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .chat-input-container {
+                padding: 12px 8px;
+            }
+
+            .chart-container {
+                margin: 8px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+    
+
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo"></div>
+                    <span class="brand-text">NAVUS</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                    <button class="signout-btn" onclick="signOut()" title="Sign out" id="signoutBtn" style="display: none;">
+                        <span>🚪</span>
+                    </button>
+                </div>
+            </div>
+            
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <span>💬</span>
+                New Chat
+            </button>
+            
+            <div class="sidebar-content">
+                <div class="section-title">Try asking these</div>
+                <div class="preset-questions">
+                    <button class="preset-btn" onclick="sendMessage('What\'s the best travel credit card in Canada?')">
+                        What's the best travel credit card in Canada?
+                    </button>
+                    <button class="preset-btn" onclick="sendMessage('Help me pay off credit card debt faster')">
+                        Help me pay off credit card debt faster
+                    </button>
+                    <button class="preset-btn" onclick="sendMessage('Best cashback card for groceries?')">
+                        Best cashback card for groceries?
+                    </button>
+                    <button class="preset-btn" onclick="sendMessage('First credit card for students?')">
+                        First credit card for students?
+                    </button>
+                    <button class="preset-btn" onclick="sendMessage('Compare RBC vs TD credit cards')">
+                        Compare RBC vs TD credit cards
+                    </button>
+                </div>
+                
+                <div class="section-title">Chat History</div>
+                <div class="chat-history" id="chatHistory">
+                    <!-- Chat history items will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <div>
+                    <div class="chat-title">Financial Advisor Chat</div>
+                    <div class="chat-subtitle">AI-powered credit card and debt advice for Canadians</div>
+                </div>
+                <button class="login-btn" onclick="goToLogin()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10,17 15,12 10,7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
+                    Login
+                </button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant">
+                    <div class="message-avatar">🏦</div>
+                    <div class="message-content">
+                        👋 Hi! I'm NAVUS, your AI financial advisor for Canadian credit cards and debt management. 
+                        How can I help you optimize your finances today?
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        class="chat-input" 
+                        placeholder="Ask about credit cards, debt payoff, or financial advice..."
+                        rows="1"
+                        onkeydown="handleInputKeydown(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Smart API URL detection for development vs production
+        function getAPIURL() {
+            const hostname = window.location.hostname;
+            
+            // Production: deployed frontend
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '192.168.1.76') {
+                return 'https://web-production-685ca.up.railway.app';  // Production API
+            }
+            
+            // Development: mobile on local network
+            if (hostname === '192.168.1.76') {
+                return 'http://192.168.1.76:8003';  // Local network API
+            }
+            
+            // Development: localhost
+            return 'http://localhost:8003';  // Local development API
+        }
+        const API_URL = getAPIURL();
+        
+        // Debug logging to help troubleshoot
+        console.log('Current hostname:', window.location.hostname);
+        console.log('API URL:', API_URL);
+        let currentChatId = 'chat-' + Date.now();
+        let chatHistory = {};
+        
+        // Theme functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.querySelector('.theme-icon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Initialize theme from localStorage
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const themeIcon = document.querySelector('.theme-icon');
+            
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.body.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+        
+        // Chat functionality
+        function startNewChat() {
+            currentChatId = 'chat-' + Date.now();
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="message assistant">
+                    <div class="message-avatar">🏦</div>
+                    <div class="message-content">
+                        👋 Hi! I'm NAVUS, your AI financial advisor for Canadian credit cards and debt management. 
+                        How can I help you optimize your finances today?
+                    </div>
+                </div>
+            `;
+            updateChatHistory();
+        }
+        
+        function updateChatHistory() {
+            const historyContainer = document.getElementById('chatHistory');
+            const historyItems = Object.keys(chatHistory).reverse().map(chatId => {
+                const chat = chatHistory[chatId];
+                const preview = chat.messages && chat.messages.length > 1 ? 
+                    chat.messages[1].content.substring(0, 50) + '...' : 
+                    'New chat';
+                
+                return `
+                    <button class="chat-item ${chatId === currentChatId ? 'active' : ''}" 
+                            onclick="loadChat('${chatId}')">
+                        ${preview}
+                    </button>
+                `;
+            }).join('');
+            
+            historyContainer.innerHTML = historyItems;
+        }
+        
+        function loadChat(chatId) {
+            currentChatId = chatId;
+            const chat = chatHistory[chatId];
+            
+            if (chat && chat.messages) {
+                const messagesContainer = document.getElementById('chatMessages');
+                messagesContainer.innerHTML = chat.messages.map(msg => `
+                    <div class="message ${msg.role}">
+                        <div class="message-avatar">${msg.role === 'user' ? '👤' : '🏦'}</div>
+                        <div class="message-content">${formatMessageContent(msg.content)}</div>
+                    </div>
+                `).join('');
+                
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            updateChatHistory();
+        }
+        
+        
+        function addMessage(content, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            // Format content for better readability
+            const formattedContent = formatMessageContent(content);
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${sender === 'user' ? '👤' : '🏦'}</div>
+                <div class="message-content">${formattedContent}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function formatMessageContent(content) {
+            // Replace markdown-style formatting with HTML
+            let formatted = content
+                // Convert **bold** to <strong>
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Convert *italic* to <em>
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Convert numbered lists
+                .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+                // Convert bullet points (- or *)
+                .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+                // Convert double line breaks to paragraph breaks
+                .replace(/\n\n/g, '</p><p>')
+                // Convert single line breaks to <br>
+                .replace(/\n/g, '<br>');
+            
+            // Wrap content in paragraphs
+            if (formatted.includes('<li>')) {
+                // Handle lists properly
+                formatted = formatted
+                    .replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>')
+                    .replace(/<\/ul><br><ul>/g, '</li><li>')
+                    .replace(/<ul><li>/g, '<ul><li>')
+                    .replace(/<\/li><\/ul>/g, '</li></ul>');
+            }
+            
+            // Wrap in paragraph tags if not already formatted
+            if (!formatted.includes('<p>') && !formatted.includes('<ul>')) {
+                formatted = '<p>' + formatted + '</p>';
+            } else if (formatted.includes('</p><p>')) {
+                formatted = '<p>' + formatted + '</p>';
+            }
+            
+            return formatted;
+        }
+        
+        function saveChatMessage(content, role) {
+            if (!chatHistory[currentChatId]) {
+                chatHistory[currentChatId] = { messages: [] };
+            }
+            
+            chatHistory[currentChatId].messages.push({ content, role });
+            updateChatHistory();
+            
+            // Save to localStorage
+            localStorage.setItem('navus_chat_history', JSON.stringify(chatHistory));
+        }
+        
+        function getChatHistory() {
+            return chatHistory[currentChatId] ? chatHistory[currentChatId].messages : [];
+        }
+        
+        function loadChatHistoryFromStorage() {
+            const saved = localStorage.getItem('navus_chat_history');
+            if (saved) {
+                chatHistory = JSON.parse(saved);
+                updateChatHistory();
+            }
+        }
+        
+        // Input handling
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+        
+        // Chart download functionality
+        function downloadChart(base64Data) {
+            const link = document.createElement('a');
+            link.href = 'data:image/png;base64,' + base64Data;
+            link.download = 'navus-financial-chart-' + new Date().toISOString().slice(0,10) + '.png';
+            link.click();
+        }
+        
+        // Mobile sidebar functionality
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+        
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
+        
+        // Detect mobile device and adjust behavior
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+        
+        // Close mobile sidebar when clicking links (better UX)
+        function handleMobileNavigation() {
+            if (isMobile()) {
+                closeMobileSidebar();
+            }
+        }
+        
+        // Enhanced error handling for mobile API connections
+        async function sendMessage(predefinedMessage = null) {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            
+            const message = predefinedMessage || input.value.trim();
+            if (!message) return;
+            
+            // Close mobile sidebar on message send
+            if (isMobile()) {
+                closeMobileSidebar();
+            }
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            autoResize(input);
+            sendBtn.disabled = true;
+            
+            // Show loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.innerHTML = `
+                <div class="message-avatar">🏦</div>
+                <div class="message-content">
+                    <div class="loading">
+                        <span>Thinking</span>
+                        <div class="loading-dots">
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_history: getChatHistory(),
+                        user_profile: {}
+                    })
+                });
+                
+                chatMessages.removeChild(loadingDiv);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addMessage(data.response, 'assistant');
+                
+                // Display chart if available
+                if (data.chart_data) {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart-container';
+                    chartDiv.innerHTML = `
+                        <img src="data:image/png;base64,${data.chart_data}" 
+                             alt="Financial Chart">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                            📊 Generated chart based on your financial scenario
+                            <button onclick="downloadChart('${data.chart_data}')" 
+                                    style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                                💾 Download PNG
+                            </button>
+                        </div>
+                    `;
+                    chatMessages.appendChild(chartDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                
+                // Save to chat history
+                saveChatMessage(message, 'user');
+                saveChatMessage(data.response, 'assistant');
+                
+            } catch (error) {
+                chatMessages.removeChild(loadingDiv);
+                console.error('Error:', error);
+                
+                // Enhanced mobile error handling
+                const errorMessage = isMobile() 
+                    ? 'Having trouble connecting. Please check your internet connection and try again.'
+                    : 'Sorry, I encountered an error. Please try again.';
+                    
+                addMessage(errorMessage, 'assistant');
+            }
+            
+            sendBtn.disabled = false;
+        }
+        
+        // Navigation functions
+        function goToLogin() {
+            const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const loginUrl = isProd ? 'https://navus.chat/login.html' : './login.html';
+            window.location.href = loginUrl;
+        }
+
+        // Sign out function
+        async function signOut() {
+            try {
+                // Show confirmation dialog
+                if (!confirm('Are you sure you want to sign out?')) {
+                    return;
+                }
+
+                // Call logout endpoint
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                
+                if (data.success || response.ok) {
+                    // Clear session token cookie
+                    document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+                    
+                    // Hide signout buttons
+                    const signoutBtn = document.getElementById('signoutBtn');
+                    if (signoutBtn) signoutBtn.style.display = 'none';
+                    
+                    // Show success message
+                    showSuccessMessage('Successfully signed out!');
+                    
+                    // Clear any user-specific data
+                    currentUser = null;
+                    
+                    // Optional: Redirect to login page or refresh
+                    setTimeout(() => {
+                        const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const loginUrl = isProd ? 'https://navus.chat/login.html' : './login.html';
+            window.location.href = loginUrl;
+                    }, 1500);
+                } else {
+                    alert('Failed to sign out. Please try again.');
+                }
+            } catch (error) {
+                console.error('Sign out error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+
+        // Check authentication status and show/hide signout button
+        async function checkAuthenticationStatus() {
+            try {
+                const response = await fetch(`${API_URL}/auth/status`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const signoutBtn = document.getElementById('signoutBtn');
+                    const loginBtn = document.querySelector('.login-btn');
+                    
+                    if (data.authenticated) {
+                        // Show signout buttons, hide login button
+                        if (signoutBtn) signoutBtn.style.display = 'flex';
+                        if (loginBtn) loginBtn.style.display = 'none';
+                        currentUser = data.user;
+                        console.log('User authenticated, showing signout buttons');
+                    } else {
+                        // Show login button, hide signout buttons
+                        if (signoutBtn) signoutBtn.style.display = 'none';
+                        if (loginBtn) loginBtn.style.display = 'flex';
+                        console.log('User not authenticated, showing login button');
+                    }
+                }
+            } catch (error) {
+                console.error('Auth status check failed:', error);
+                const signoutBtn = document.getElementById('signoutBtn');
+                const loginBtn = document.querySelector('.login-btn');
+                // Default to showing login button if auth check fails
+                if (signoutBtn) signoutBtn.style.display = 'none';
+                if (loginBtn) loginBtn.style.display = 'flex';
+            }
+        }
+
+        // Show success message
+        function showSuccessMessage(message) {
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                background: var(--success); color: white; padding: 16px;
+                border-radius: 8px; box-shadow: var(--shadow-lg);
+                animation: slideIn 0.3s ease;
+            `;
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 3000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            loadChatHistoryFromStorage();
+            checkAuthenticationStatus();
+        });
+    </script>
+</body>
+</html>
