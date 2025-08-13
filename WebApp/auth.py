@@ -1,5 +1,6 @@
 import jwt
 import bcrypt
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ import secrets
 import uuid
 
 # JWT Configuration
-SECRET_KEY = "your-secret-key-here-change-in-production"  # Should be in environment variable
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-fallback-key-not-for-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 PERSISTENT_TOKEN_EXPIRE_DAYS = 30
