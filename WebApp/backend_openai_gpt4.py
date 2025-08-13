@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import authentication modules
-from database import get_db, create_tables, User
+from database import get_db, create_tables, User, Conversation, ChatMessage
 from auth import (
     authenticate_user, create_user, create_session, get_user_by_session,
     validate_password_strength, logout_session, AuthError, create_or_get_google_user,
@@ -39,6 +39,10 @@ from auth import (
 )
 from google_oauth import google_oauth
 from twitch_oauth import twitch_oauth
+from chat_memory import (
+    get_or_create_conversation, save_message, get_conversation_history, 
+    get_conversation_context, clear_conversation_history, get_user_conversations
+)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -70,6 +74,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     conversation_history: Optional[List[dict]] = []
+    conversation_id: Optional[str] = None
     user_profile: Optional[Dict] = {}
 
 class ChatResponse(BaseModel):
@@ -340,7 +345,8 @@ class OpenAIGPT4NavusModel:
             logger.error(f"Error generating chart: {e}")
             return None
     
-    def create_financial_prompt(self, user_message: str, user_profile: Dict = None) -> List[Dict]:
+    def create_financial_prompt(self, user_message: str, user_profile: Dict = None, 
+                               conversation_context: str = None, recent_messages: List = None) -> List[Dict]:
         """Create a specialized prompt for Canadian financial advice with GPT-4"""
         
         # Get relevant card data as context
@@ -365,6 +371,24 @@ class OpenAIGPT4NavusModel:
             if user_profile.get('credit_score'):
                 profile_context += f"User's credit score: {user_profile['credit_score']}\n"
         
+        # Add conversation context if available
+        conversation_section = ""
+        if conversation_context:
+            conversation_section = f"""
+CONVERSATION CONTEXT:
+{conversation_context}
+
+"""
+        
+        # Add recent messages if available
+        recent_messages_section = ""
+        if recent_messages:
+            recent_messages_section = "RECENT CONVERSATION:\n"
+            for msg in recent_messages[-5:]:  # Last 5 messages for context
+                role_prefix = "User" if msg['role'] == 'user' else "Assistant"
+                recent_messages_section += f"{role_prefix}: {msg['content'][:200]}...\n"
+            recent_messages_section += "\n"
+
         system_message = f"""You are NAVUS, Canada's most advanced AI financial advisor specializing in credit cards, debt management, and personal finance. You have access to comprehensive Canadian banking data and 1,978 training examples.
 
 CANADIAN CREDIT CARDS DATABASE:
@@ -373,6 +397,10 @@ CANADIAN CREDIT CARDS DATABASE:
 {examples_context}
 
 {profile_context}
+
+{conversation_section}
+
+{recent_messages_section}
 
 INSTRUCTIONS:
 1. Provide specific, actionable advice tailored for Canadians
@@ -577,14 +605,17 @@ Please ask me a specific question about debt payoff, card comparisons, or financ
         
         return questions[:3]  # Return up to 3 suggestions
     
-    async def generate_response(self, user_message: str, user_profile: Dict = None) -> tuple:
-        """Generate intelligent response using OpenAI GPT-4"""
+    async def generate_response(self, user_message: str, user_profile: Dict = None, 
+                               conversation_context: str = None, recent_messages: List = None) -> tuple:
+        """Generate intelligent response using OpenAI GPT-4 with conversation memory"""
         start_time = time.time()
         
         try:
             if self.loaded and self.openai_api_key:
-                # Use GPT-4 for advanced response
-                messages = self.create_financial_prompt(user_message, user_profile)
+                # Use GPT-4 for advanced response with conversation context
+                messages = self.create_financial_prompt(
+                    user_message, user_profile, conversation_context, recent_messages
+                )
                 response, chart_data = await self.generate_gpt4_response(messages)
                 suggestions = self.extract_follow_up_questions(response)
             else:
@@ -637,13 +668,40 @@ async def health():
     )
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """Enhanced chat endpoint with OpenAI GPT-4 and charts"""
+async def chat(request: ChatRequest, authorization: str = Header(None), db: Session = Depends(get_db)):
+    """Enhanced chat endpoint with OpenAI GPT-4, charts, and conversation memory"""
     try:
+        # Get user if authenticated
+        user_id = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+            user = get_user_by_session(db, token)
+            if user:
+                user_id = user.user_id
+        
+        # Get or create conversation
+        conversation = get_or_create_conversation(
+            db, user_id=user_id, conversation_id=request.conversation_id
+        )
+        
+        # Get conversation context for AI
+        context_string, recent_messages = get_conversation_context(db, conversation)
+        
+        # Generate AI response with context
         response, processing_time, suggestions, chart_data = await navus_model.generate_response(
             request.message, 
-            request.user_profile
+            request.user_profile,
+            conversation_context=context_string,
+            recent_messages=recent_messages
         )
+        
+        # Save user message and AI response to database
+        save_message(db, conversation, 'user', request.message)
+        save_message(db, conversation, 'assistant', response, {
+            'processing_time': processing_time,
+            'chart_data': chart_data,
+            'suggested_questions': suggestions
+        })
         
         return ChatResponse(
             response=response,
@@ -812,6 +870,98 @@ async def auth_status(authorization: str = Header(None), session_token: str = Co
     except Exception as e:
         logger.error(f"Auth status check error: {e}")
         return {"authenticated": False, "user": None}
+
+# ========== CONVERSATION MANAGEMENT ENDPOINTS ==========
+
+@app.get("/conversations")
+async def get_conversations(authorization: str = Header(None), db: Session = Depends(get_db)):
+    """Get user's conversation history"""
+    try:
+        # Check authentication
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        token = authorization.split(" ")[1]
+        user = get_user_by_session(db, token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid session")
+        
+        conversations = get_user_conversations(db, user.user_id)
+        return {"conversations": conversations}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting conversations: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: str, 
+    authorization: str = Header(None), 
+    db: Session = Depends(get_db)
+):
+    """Get messages from a specific conversation"""
+    try:
+        # Check authentication
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        token = authorization.split(" ")[1]
+        user = get_user_by_session(db, token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid session")
+        
+        # Verify conversation ownership
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_id == conversation_id,
+            Conversation.user_id == user.user_id
+        ).first()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        messages = get_conversation_history(db, conversation_id)
+        return {"messages": messages, "conversation": {
+            "id": conversation.conversation_id,
+            "title": conversation.title,
+            "created_at": conversation.created_at.isoformat(),
+            "message_count": conversation.message_count
+        }}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting conversation messages: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.delete("/conversations/{conversation_id}/clear")
+async def clear_conversation(
+    conversation_id: str, 
+    authorization: str = Header(None), 
+    db: Session = Depends(get_db)
+):
+    """Clear conversation history"""
+    try:
+        # Check authentication
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        token = authorization.split(" ")[1]
+        user = get_user_by_session(db, token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid session")
+        
+        # Clear conversation history
+        clear_conversation_history(db, conversation_id, user.user_id)
+        
+        return {"success": True, "message": "Conversation history cleared"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error clearing conversation: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/auth/me")
 async def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)):

@@ -1,9 +1,10 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Index
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from datetime import datetime
 import uuid
+import json
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./navus_auth.db")
@@ -42,6 +43,50 @@ class Session(Base):
     expires_at = Column(DateTime)
     is_persistent = Column(Boolean, default=False)  # "Keep me logged in" flag
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Conversation(Base):
+    """
+    Represents a conversation/chat session for a user.
+    Each conversation has its own context and summary.
+    """
+    __tablename__ = "conversations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey('users.user_id'), nullable=True, index=True)  # Nullable for anonymous
+    title = Column(String, default="New Conversation")  # Auto-generated from first message
+    summary = Column(Text, nullable=True)  # Condensed conversation context
+    message_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+    
+    # Index for faster queries
+    __table_args__ = (Index('idx_user_active', 'user_id', 'is_active'),)
+
+class ChatMessage(Base):
+    """
+    Individual messages within a conversation.
+    """
+    __tablename__ = "chat_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    conversation_id = Column(String, ForeignKey('conversations.conversation_id'), index=True)
+    role = Column(String, index=True)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    metadata = Column(Text, nullable=True)  # JSON for chart_data, processing_time, etc.
+    token_count = Column(Integer, nullable=True)  # For token usage tracking
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    conversation = relationship("Conversation", back_populates="messages")
+    
+    # Index for faster queries
+    __table_args__ = (Index('idx_conversation_created', 'conversation_id', 'created_at'),)
 
 # Dependency to get database session
 def get_db():

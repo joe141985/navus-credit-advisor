@@ -166,6 +166,25 @@
         .new-chat-btn:hover {
             background: var(--accent-hover);
         }
+        .clear-history-btn {
+            margin: 0 20px 20px 20px;
+            padding: 10px 16px;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .clear-history-btn:hover {
+            background: #c41e3a;
+            transform: translateY(-1px);
+        }
 
         .sidebar-content {
             flex: 1;
@@ -753,6 +772,11 @@
                 New Chat
             </button>
             
+            <button class="clear-history-btn" onclick="clearChatHistory()">
+                <span>🗑️</span>
+                Clear History
+            </button>
+            
             <div class="sidebar-content">
                 <div class="section-title">Try asking these</div>
                 <div class="preset-questions">
@@ -853,6 +877,8 @@
         console.log('API URL:', API_URL);
         let currentChatId = 'chat-' + Date.now();
         let chatHistory = {};
+        let currentConversationId = null;  // For server-side conversation tracking
+        let isAuthenticated = false;  // Track authentication state
         
         // Theme functionality
         function toggleTheme() {
@@ -886,7 +912,14 @@
         
         // Chat functionality
         function startNewChat() {
-            currentChatId = 'chat-' + Date.now();
+            // Handle both authenticated and anonymous users
+            if (isAuthenticated) {
+                currentConversationId = null;  // Will create new one on next message
+            } else {
+                currentChatId = 'chat-' + Date.now();
+                chatHistory[currentChatId] = { messages: [] };
+            }
+            
             document.getElementById('chatMessages').innerHTML = `
                 <div class="message assistant">
                     <div class="message-avatar">🏦</div>
@@ -897,6 +930,7 @@
                 </div>
             `;
             updateChatHistory();
+            console.log('Started new chat conversation');
         }
         
         function updateChatHistory() {
@@ -1014,6 +1048,88 @@
             }
         }
         
+        // ========== CONVERSATION MANAGEMENT FOR LOGGED-IN USERS ==========
+        
+        async function loadUserConversations() {
+            if (!isAuthenticated) return;
+            
+            try {
+                const sessionToken = localStorage.getItem('session_token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                if (sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
+                
+                const response = await fetch(`${API_URL}/conversations`, {
+                    method: 'GET',
+                    headers: headers,
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const conversations = await response.json();
+                    console.log('Loaded user conversations:', conversations);
+                    // TODO: Update sidebar with conversation list
+                } else {
+                    console.log('No conversations found or error loading conversations');
+                }
+            } catch (error) {
+                console.error('Error loading user conversations:', error);
+            }
+        }
+        
+        
+        async function clearChatHistory() {
+            if (!confirm('Are you sure you want to clear all chat history? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                if (isAuthenticated && currentConversationId) {
+                    // Clear server-side history
+                    const sessionToken = localStorage.getItem('session_token');
+                    const headers = {
+                        'Content-Type': 'application/json',
+                    };
+                    if (sessionToken) {
+                        headers['Authorization'] = `Bearer ${sessionToken}`;
+                    }
+                    
+                    const response = await fetch(`${API_URL}/conversations/${currentConversationId}/clear`, {
+                        method: 'DELETE',
+                        headers: headers,
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        console.log('Server-side chat history cleared');
+                    }
+                }
+                
+                // Clear local storage
+                localStorage.removeItem('navus_chat_history');
+                chatHistory = {};
+                currentChatId = 'chat-' + Date.now();
+                currentConversationId = null;
+                
+                // Clear chat display
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                
+                // Update history sidebar
+                updateChatHistory();
+                
+                console.log('Chat history cleared');
+                showSuccessMessage('Chat history has been cleared successfully!');
+                
+            } catch (error) {
+                console.error('Error clearing chat history:', error);
+                alert('Error clearing chat history. Please try again.');
+            }
+        }
+        
         // Input handling
         function handleInputKeydown(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -1104,14 +1220,23 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
             try {
+                // Get authentication headers if user is logged in
+                const sessionToken = localStorage.getItem('session_token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                if (sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
+                
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
+                    credentials: 'include',
                     body: JSON.stringify({
                         message: message,
                         conversation_history: getChatHistory(),
+                        conversation_id: sessionToken ? currentConversationId : null,
                         user_profile: {}
                     })
                 });
@@ -1241,11 +1366,17 @@
                         if (signoutBtn) signoutBtn.style.display = 'flex';
                         if (loginBtn) loginBtn.style.display = 'none';
                         currentUser = data.user;
+                        isAuthenticated = true;
                         console.log('User authenticated, showing signout buttons');
+                        
+                        // Load conversation history for logged-in user
+                        loadUserConversations();
                     } else {
                         // Show login button, hide signout buttons
                         if (signoutBtn) signoutBtn.style.display = 'none';
                         if (loginBtn) loginBtn.style.display = 'flex';
+                        isAuthenticated = false;
+                        currentConversationId = null;
                         console.log('User not authenticated, showing login button');
                     }
                 }
