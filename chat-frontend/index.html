@@ -1275,7 +1275,19 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeTheme();
             loadChatHistoryFromStorage();
-            checkAuthenticationStatus();
+            
+            // Check if we just returned from OAuth
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auth') === 'success') {
+                // Clear the URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Add a delay to ensure cookie is available
+                setTimeout(() => {
+                    checkAuthenticationStatus();
+                }, 500);
+            } else {
+                checkAuthenticationStatus();
+            }
         });
     </script>
 </body>
