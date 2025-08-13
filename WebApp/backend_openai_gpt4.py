@@ -906,7 +906,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
             value=session_token,
             httponly=True,
             secure=is_production,  # True for HTTPS production, False for localhost development
-            samesite="lax",
+            samesite="none" if is_production else "lax",  # Use "none" for cross-origin in production
             max_age=86400 * 30  # 30 days
         )
         
@@ -992,7 +992,7 @@ async def twitch_callback(code: str, state: str, db: Session = Depends(get_db)):
             value=session_token,
             httponly=True,
             secure=is_production,  # True for HTTPS production, False for localhost development
-            samesite="lax",
+            samesite="none" if is_production else "lax",  # Use "none" for cross-origin in production
             max_age=86400 * 30  # 30 days
         )
         
