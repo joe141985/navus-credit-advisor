@@ -1187,7 +1187,8 @@
                 const data = await response.json();
                 
                 if (data.success || response.ok) {
-                    // Clear session token cookie
+                    // Clear session token from localStorage and cookie
+                    localStorage.removeItem('session_token');
                     document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
                     
                     // Hide signout buttons
@@ -1218,9 +1219,16 @@
         // Check authentication status and show/hide signout button
         async function checkAuthenticationStatus() {
             try {
+                const sessionToken = localStorage.getItem('session_token');
+                const headers = {};
+                if (sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
+                
                 const response = await fetch(`${API_URL}/auth/status`, {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: headers
                 });
                 
                 if (response.ok) {
@@ -1279,12 +1287,16 @@
             // Check if we just returned from OAuth
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('auth') === 'success') {
+                const token = urlParams.get('token');
+                if (token) {
+                    // Store the session token
+                    localStorage.setItem('session_token', token);
+                    console.log('Session token stored from OAuth redirect');
+                }
                 // Clear the URL parameters
                 window.history.replaceState({}, document.title, window.location.pathname);
-                // Add a delay to ensure cookie is available
-                setTimeout(() => {
-                    checkAuthenticationStatus();
-                }, 500);
+                // Check authentication status
+                checkAuthenticationStatus();
             } else {
                 checkAuthenticationStatus();
             }

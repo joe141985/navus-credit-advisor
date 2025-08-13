@@ -783,13 +783,20 @@ async def logout_user(session_token: str = Cookie(None), db: Session = Depends(g
         return {"success": False, "message": "Logout failed"}
 
 @app.get("/auth/status")
-async def auth_status(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+async def auth_status(authorization: str = Header(None), session_token: str = Cookie(None), db: Session = Depends(get_db)):
     """Check authentication status"""
     try:
-        if not session_token:
+        # Check Authorization header first, then cookie
+        token = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+        elif session_token:
+            token = session_token
+            
+        if not token:
             return {"authenticated": False, "user": None}
         
-        user = get_user_by_session(db, session_token)
+        user = get_user_by_session(db, token)
         if user:
             user_data = {
                 "id": user.id,
@@ -897,7 +904,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         
         # Redirect to frontend with success and set cookie
         frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
-        response = RedirectResponse(url=f"{frontend_url}?auth=success")
+        response = RedirectResponse(url=f"{frontend_url}?auth=success&token={session_token}")
         
         # Set session token as cookie
         is_production = os.getenv('ENVIRONMENT') != 'development'
@@ -983,7 +990,7 @@ async def twitch_callback(code: str, state: str, db: Session = Depends(get_db)):
         
         # Redirect to frontend with success and set cookie
         frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
-        response = RedirectResponse(url=f"{frontend_url}?auth=success")
+        response = RedirectResponse(url=f"{frontend_url}?auth=success&token={session_token}")
         
         # Set session token as cookie
         is_production = os.getenv('ENVIRONMENT') != 'development'
