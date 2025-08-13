@@ -4,10 +4,12 @@ NAVUS Credit Card Advisor API - OpenAI GPT-4 Enhanced
 Uses OpenAI's GPT-4 for advanced financial advice with chart generation
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict
+from sqlalchemy.orm import Session
 import pandas as pd
 import logging
 import os
@@ -23,6 +25,20 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-GUI backend
 import seaborn as sns
 import numpy as np
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Import authentication modules
+from database import get_db, create_tables, User
+from auth import (
+    authenticate_user, create_user, create_session, get_user_by_session,
+    validate_password_strength, logout_session, AuthError, create_or_get_google_user,
+    create_or_get_twitch_user
+)
+from google_oauth import google_oauth
+from twitch_oauth import twitch_oauth
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -37,9 +53,16 @@ app = FastAPI(
 # CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8081", 
+        "http://127.0.0.1:8081",
+        "http://192.168.1.76:8081",
+        "https://navus.chat",
+        "https://web-production-685ca.up.railway.app"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -61,6 +84,30 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     model_type: str
     memory_usage: Optional[str] = None
+
+# Authentication models
+class UserRegister(BaseModel):
+    email: EmailStr
+    name: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+    keep_logged_in: bool = False
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    user_id: Optional[str] = None
+    name: Optional[str] = None
+    session_token: Optional[str] = None
+
+class PasswordStrengthResponse(BaseModel):
+    score: int
+    max_score: int
+    is_strong: bool
+    issues: List[str]
 
 class OpenAIGPT4NavusModel:
     def __init__(self):
@@ -652,8 +699,330 @@ async def get_model_status():
         "timestamp": datetime.now().isoformat()
     }
 
+# Authentication endpoints
+@app.post("/auth/register", response_model=AuthResponse)
+async def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
+    """Register a new user"""
+    try:
+        # Validate password strength
+        password_check = validate_password_strength(user_data.password)
+        if not password_check["is_strong"]:
+            return AuthResponse(
+                success=False,
+                message="Password does not meet strength requirements: " + ", ".join(password_check["issues"])
+            )
+        
+        # Create user
+        user = create_user(db, user_data.email, user_data.name, user_data.password)
+        
+        # Create session
+        session_token = create_session(db, user.user_id, is_persistent=False)
+        
+        logger.info(f"New user registered: {user_data.email}")
+        
+        return AuthResponse(
+            success=True,
+            message="Account created successfully",
+            user_id=user.user_id,
+            name=user.name,
+            session_token=session_token
+        )
+        
+    except AuthError as e:
+        return AuthResponse(success=False, message=str(e))
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        return AuthResponse(success=False, message="Registration failed. Please try again.")
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
+    """Login user"""
+    try:
+        # Authenticate user
+        user = authenticate_user(db, user_data.email, user_data.password)
+        if not user:
+            return AuthResponse(success=False, message="Invalid email or password")
+        
+        # Create session
+        session_token = create_session(db, user.user_id, is_persistent=user_data.keep_logged_in)
+        
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.commit()
+        
+        logger.info(f"User logged in: {user_data.email}")
+        
+        return AuthResponse(
+            success=True,
+            message="Login successful",
+            user_id=user.user_id,
+            name=user.name,
+            session_token=session_token
+        )
+        
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return AuthResponse(success=False, message="Login failed. Please try again.")
+
+@app.post("/auth/logout")
+async def logout_user(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    """Logout user"""
+    try:
+        if not session_token:
+            return {"success": False, "message": "No active session"}
+        
+        success = logout_session(db, session_token)
+        if success:
+            logger.info("User logged out successfully")
+            return {"success": True, "message": "Logged out successfully"}
+        else:
+            return {"success": False, "message": "Invalid session"}
+            
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+        return {"success": False, "message": "Logout failed"}
+
+@app.get("/auth/status")
+async def auth_status(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    """Check authentication status"""
+    try:
+        if not session_token:
+            return {"authenticated": False, "user": None}
+        
+        user = get_user_by_session(db, session_token)
+        if user:
+            user_data = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "profile_picture": user.profile_picture,
+                "oauth_provider": user.oauth_provider
+            }
+            return {"authenticated": True, "user": user_data}
+        else:
+            return {"authenticated": False, "user": None}
+            
+    except Exception as e:
+        logger.error(f"Auth status check error: {e}")
+        return {"authenticated": False, "user": None}
+
+@app.get("/auth/me")
+async def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    """Get current user information"""
+    try:
+        if not session_token:
+            return {"authenticated": False, "message": "No active session"}
+        
+        user = get_user_by_session(db, session_token)
+        if not user:
+            return {"authenticated": False, "message": "Invalid or expired session"}
+        
+        return {
+            "authenticated": True,
+            "user_id": user.user_id,
+            "name": user.name,
+            "email": user.email,
+            "created_at": user.created_at.isoformat(),
+            "last_login": user.last_login.isoformat() if user.last_login else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Get current user error: {e}")
+        return {"authenticated": False, "message": "Authentication check failed"}
+
+@app.post("/auth/validate-password", response_model=PasswordStrengthResponse)
+async def validate_password(password: dict):
+    """Validate password strength"""
+    try:
+        password_str = password.get("password", "")
+        result = validate_password_strength(password_str)
+        
+        return PasswordStrengthResponse(
+            score=result["score"],
+            max_score=result["max_score"],
+            is_strong=result["is_strong"],
+            issues=result["issues"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Password validation error: {e}")
+        return PasswordStrengthResponse(
+            score=0,
+            max_score=5,
+            is_strong=False,
+            issues=["Password validation failed"]
+        )
+
+# Google OAuth endpoints
+@app.get("/auth/google")
+async def google_login():
+    """Initiate Google OAuth login"""
+    try:
+        if not google_oauth.is_configured():
+            return {"error": "Google OAuth is not configured"}
+        
+        authorization_url = google_oauth.get_authorization_url()
+        if not authorization_url:
+            return {"error": "Failed to generate Google authorization URL"}
+        
+        return {"authorization_url": authorization_url}
+        
+    except Exception as e:
+        logger.error(f"Google OAuth initiation error: {e}")
+        return {"error": "Failed to initiate Google login"}
+
+@app.get("/auth/google/callback")
+async def google_callback(code: str, db: Session = Depends(get_db)):
+    """Handle Google OAuth callback"""
+    try:
+        if not google_oauth.is_configured():
+            return {"error": "Google OAuth is not configured"}
+        
+        # Exchange authorization code for user info
+        user_info = google_oauth.exchange_code_for_token(code)
+        if not user_info:
+            return {"error": "Failed to get user information from Google"}
+        
+        # Create or get user
+        user = create_or_get_google_user(db, user_info)
+        
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.commit()
+        
+        # Create session
+        session_token = create_session(db, user.user_id, is_persistent=True)  # Google login is persistent by default
+        
+        logger.info(f"Google OAuth login successful: {user.email}")
+        
+        # Redirect to frontend with success and set cookie
+        frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
+        response = RedirectResponse(url=f"{frontend_url}?auth=success")
+        
+        # Set session token as cookie
+        is_production = os.getenv('ENVIRONMENT') != 'development'
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=is_production,  # True for HTTPS production, False for localhost development
+            samesite="lax",
+            max_age=86400 * 30  # 30 days
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Google OAuth callback error: {e}")
+        frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
+        return RedirectResponse(url=f"{frontend_url}/login?error=oauth_failed")
+
+@app.get("/auth/google/status")
+async def google_oauth_status():
+    """Check Google OAuth configuration status"""
+    return {
+        "configured": google_oauth.is_configured(),
+        "redirect_uri": google_oauth.redirect_uri if google_oauth.is_configured() else None
+    }
+
+# Twitch OAuth endpoints
+@app.get("/auth/twitch")
+async def twitch_login():
+    """Initiate Twitch OAuth login"""
+    try:
+        if not twitch_oauth.is_configured():
+            return {"error": "Twitch OAuth is not configured"}
+        
+        # Generate secure state parameter
+        state = twitch_oauth.generate_state()
+        
+        # Store state in session (for production, use Redis or database)
+        # For now, we'll validate it in the callback
+        
+        authorization_url = twitch_oauth.get_authorization_url(state)
+        if not authorization_url:
+            return {"error": "Failed to generate Twitch authorization URL"}
+        
+        return {
+            "authorization_url": authorization_url,
+            "state": state  # Frontend should store this to validate callback
+        }
+        
+    except Exception as e:
+        logger.error(f"Twitch OAuth initiation error: {e}")
+        return {"error": "Failed to initiate Twitch login"}
+
+@app.get("/auth/twitch/callback")
+async def twitch_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """Handle Twitch OAuth callback"""
+    try:
+        if not twitch_oauth.is_configured():
+            return {"error": "Twitch OAuth is not configured"}
+        
+        # Exchange authorization code for access token
+        access_token = await twitch_oauth.exchange_code_for_token(code)
+        if not access_token:
+            return {"error": "Failed to exchange code for access token"}
+        
+        # Get user information from Twitch
+        user_info = await twitch_oauth.get_user_info(access_token)
+        if not user_info:
+            return {"error": "Failed to get user information from Twitch"}
+        
+        # Create or get user
+        user = create_or_get_twitch_user(db, user_info)
+        
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.commit()
+        
+        # Create session
+        session_token = create_session(db, user.user_id, is_persistent=True)  # Twitch login is persistent by default
+        
+        logger.info(f"Twitch OAuth login successful: {user_info.get('login')}")
+        
+        # Redirect to frontend with success and set cookie
+        frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
+        response = RedirectResponse(url=f"{frontend_url}?auth=success")
+        
+        # Set session token as cookie
+        is_production = os.getenv('ENVIRONMENT') != 'development'
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=is_production,  # True for HTTPS production, False for localhost development
+            samesite="lax",
+            max_age=86400 * 30  # 30 days
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Twitch OAuth callback error: {e}")
+        frontend_url = "http://localhost:8081" if os.getenv('ENVIRONMENT') == 'development' else "https://navus.chat"
+        return RedirectResponse(url=f"{frontend_url}/login?error=oauth_failed")
+
+@app.get("/auth/twitch/status")
+async def twitch_oauth_status():
+    """Check Twitch OAuth configuration status"""
+    return {
+        "configured": twitch_oauth.is_configured(),
+        "redirect_uri": twitch_oauth.redirect_uri if twitch_oauth.is_configured() else None,
+        "client_id": twitch_oauth.client_id if twitch_oauth.is_configured() else None
+    }
+
 if __name__ == "__main__":
     import uvicorn
+    
+    # Initialize database tables
+    print("🗄️ Initializing database tables...")
+    try:
+        create_tables()
+        print("✅ Database tables initialized successfully")
+    except Exception as e:
+        print(f"⚠️ Database initialization warning: {e}")
+        print("🔄 The application will still start, but authentication may not work without a database connection")
     
     port = int(os.environ.get("PORT", 8003))  # Different port
     
@@ -661,5 +1030,6 @@ if __name__ == "__main__":
     print(f"📱 API will be available on port: {port}")
     print("🤖 Using OpenAI GPT-4 Turbo for advanced financial advice")
     print("📊 Enhanced chart generation enabled")
+    print("🔐 Authentication system enabled")
     
     uvicorn.run(app, host="0.0.0.0", port=port)

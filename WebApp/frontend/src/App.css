@@ -22,14 +22,116 @@ body {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 1rem;
+}
+
+/* Authentication Section */
+.auth-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-btn {
+  background: #fff;
+  color: #333;
+  border: 1px solid #dadce0;
+}
+
+.google-btn:hover {
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.twitch-btn {
+  background: #9146ff;
+  color: white;
+}
+
+.twitch-btn:hover {
+  background: #7c3aed;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-picture {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.signout-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0.5rem 1rem !important;
+  border: 1px solid #7D1500 !important;
+  border-radius: 6px !important;
+  background: #9E1A00 !important;
+  color: white !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(158, 26, 0, 0.2) !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 80px !important;
+}
+
+.signout-btn:hover {
+  background: #7D1500 !important;
+  box-shadow: 0 2px 8px rgba(158, 26, 0, 0.3) !important;
+}
+
+.auth-loading {
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding: 0.5rem 1rem;
 }
 
 .logo-icon {
