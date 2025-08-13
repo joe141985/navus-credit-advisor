@@ -3,9 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NAVUS">
+    <meta name="application-name" content="NAVUS">
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <!-- Additional iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-startup-image" href="/icon-512x512.png">
+    
     <title>NAVUS - AI Financial Advisor</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1432,6 +1453,274 @@
                 checkAuthenticationStatus();
             }
         });
+        
+        // ========== PWA SERVICE WORKER REGISTRATION ==========
+        
+        // Check for service worker support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('✅ PWA: Service worker registered successfully:', registration.scope);
+                    
+                    // Listen for service worker updates
+                    registration.addEventListener('updatefound', () => {
+                        console.log('🔄 PWA: Service worker update found');
+                        const newWorker = registration.installing;
+                        
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New service worker installed, prompt user to reload
+                                showUpdateAvailable();
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('❌ PWA: Service worker registration failed:', error);
+                }
+            });
+            
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'SYNC_OFFLINE_MESSAGES') {
+                    console.log('🔄 PWA: Syncing offline messages...');
+                    // Handle offline message sync if needed
+                }
+            });
+        }
+        
+        // ========== PWA INSTALL PROMPTS ==========
+        
+        let deferredPrompt;
+        let pwaInstallBtn = null;
+        
+        // Listen for beforeinstallprompt event (Android/Chrome)
+        window.addEventListener('beforeinstallprompt', (event) => {
+            console.log('📱 PWA: Install prompt triggered');
+            
+            // Prevent the default install prompt
+            event.preventDefault();
+            deferredPrompt = event;
+            
+            // Show custom install button
+            showInstallButton();
+        });
+        
+        // Listen for app installed event
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA: App installed successfully');
+            deferredPrompt = null;
+            hideInstallButton();
+            showSuccessMessage('NAVUS has been installed on your device!');
+        });
+        
+        // Create and show install button
+        function showInstallButton() {
+            if (pwaInstallBtn) return; // Already showing
+            
+            pwaInstallBtn = document.createElement('button');
+            pwaInstallBtn.innerHTML = '📱 Install NAVUS App';
+            pwaInstallBtn.className = 'pwa-install-btn';
+            pwaInstallBtn.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 25px;
+                padding: 12px 20px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                z-index: 1000;
+                animation: slideInUp 0.3s ease;
+                font-family: inherit;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+            `;
+            
+            pwaInstallBtn.addEventListener('click', handleInstallClick);
+            pwaInstallBtn.addEventListener('mouseenter', () => {
+                pwaInstallBtn.style.transform = 'translateY(-2px)';
+                pwaInstallBtn.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+            });
+            pwaInstallBtn.addEventListener('mouseleave', () => {
+                pwaInstallBtn.style.transform = 'translateY(0)';
+                pwaInstallBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+            });
+            
+            document.body.appendChild(pwaInstallBtn);
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                if (pwaInstallBtn) {
+                    hideInstallButton();
+                }
+            }, 10000);
+        }
+        
+        // Handle install button click
+        async function handleInstallClick() {
+            if (!deferredPrompt) return;
+            
+            try {
+                // Show the install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for user response
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`📱 PWA: Install prompt outcome: ${outcome}`);
+                
+                if (outcome === 'accepted') {
+                    showSuccessMessage('Thanks for installing NAVUS!');
+                } else {
+                    showSuccessMessage('You can install NAVUS anytime from your browser menu.');
+                }
+                
+                deferredPrompt = null;
+                hideInstallButton();
+            } catch (error) {
+                console.error('❌ PWA: Install prompt error:', error);
+            }
+        }
+        
+        // Hide install button
+        function hideInstallButton() {
+            if (pwaInstallBtn) {
+                pwaInstallBtn.style.animation = 'slideOutDown 0.3s ease';
+                setTimeout(() => {
+                    if (pwaInstallBtn && pwaInstallBtn.parentNode) {
+                        pwaInstallBtn.parentNode.removeChild(pwaInstallBtn);
+                        pwaInstallBtn = null;
+                    }
+                }, 300);
+            }
+        }
+        
+        // iOS Install Instructions
+        function showIOSInstallInstructions() {
+            if (isIOSDevice() && !isStandalone()) {
+                const message = `
+                    <div style="text-align: left;">
+                        <strong>Install NAVUS on your iPhone/iPad:</strong><br>
+                        1. Tap the Share button <strong>⎋</strong><br>
+                        2. Select "Add to Home Screen"<br>
+                        3. Tap "Add" to install
+                    </div>
+                `;
+                
+                const installDiv = document.createElement('div');
+                installDiv.innerHTML = message;
+                installDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    font-size: 14px;
+                    max-width: 300px;
+                    z-index: 1001;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                `;
+                
+                document.body.appendChild(installDiv);
+                
+                // Auto-hide after 8 seconds
+                setTimeout(() => {
+                    if (installDiv.parentNode) {
+                        installDiv.parentNode.removeChild(installDiv);
+                    }
+                }, 8000);
+            }
+        }
+        
+        // Utility functions
+        function isIOSDevice() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent);
+        }
+        
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone === true;
+        }
+        
+        function showUpdateAvailable() {
+            const updateDiv = document.createElement('div');
+            updateDiv.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span>🔄 New version available!</span>
+                    <button onclick="window.location.reload()" style="
+                        background: white;
+                        color: #667eea;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">Update</button>
+                </div>
+            `;
+            updateDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #667eea;
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 1002;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            `;
+            
+            document.body.appendChild(updateDiv);
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => {
+                if (updateDiv.parentNode) {
+                    updateDiv.parentNode.removeChild(updateDiv);
+                }
+            }, 8000);
+        }
+        
+        // Show iOS install instructions after 3 seconds if on iOS
+        setTimeout(showIOSInstallInstructions, 3000);
+        
+        // Add CSS animations
+        const pwaStyles = document.createElement('style');
+        pwaStyles.textContent = `
+            @keyframes slideInUp {
+                from {
+                    transform: translateY(100px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutDown {
+                from {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateY(100px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(pwaStyles);
+        
     </script>
 </body>
 </html>

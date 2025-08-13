@@ -1,0 +1,14 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="96" cy="96" r="96" fill="#667eea"/>
+  
+  <!-- Credit card icon -->
+  <rect x="48" y="72" width="96" height="64" rx="8" fill="white"/>
+  <rect x="48" y="88" width="96" height="8" fill="#667eea"/>
+  
+  <!-- NAVUS text -->
+  <text x="96" y="160" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="white">NAVUS</text>
+  
+  <!-- Chip representation -->
+  <rect x="60" y="100" width="16" height="12" rx="2" fill="#FFD700"/>
+</svg>
